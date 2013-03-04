@@ -47,7 +47,7 @@ sub init {
 
 sub parse {
     my ( $core, $self ) = @_;
-    print "Parsing cookies\n";
+    #print "Parsing cookies\n";
     my $raw = $core->get('raw');
     #'MY_COOKIE=BEST_COOKIE%3Dchocolatechip; B=BEST_COOKIE%3Dchocolatechip',
     my @rawcookies = split( '; ', $raw );
@@ -57,8 +57,8 @@ sub parse {
     for my $rawcookie ( @rawcookies ) {
         $rawcookie =~ m/^([A-Z_]+)=(.+)/;
         my $name = $1;
-        my $cookie = { name => $name, content => uri_unescape( $2 ) };
-        print "Found cookie named $name\n";
+        my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
+        #print "Found cookie named $name\n";
         $byname->{ $name } = $cookie;
         push( @cookies, $cookie );
     }
@@ -95,12 +95,14 @@ sub add {
 }
 
 sub decode {
-    my ( $core, $self ) = @_;
-    my $raw = $core->get('raw');
+    #my ( $core, $self ) = @_;
+    #my $raw = $core->get('raw');
+    my $raw = shift;
     my $hash = {};
     while( $raw =~ m'([a-z_]+)=(.+[^\\])(\&|$)'g ) {
         my $key = $1;
         my $val = $2;
+        $val =~ s/\\(.)/$1/g;
         print "$key = $val\n";
         $hash->{ $key } = $val;                  
     }
@@ -114,13 +116,15 @@ sub create {
     my $path    = $core->get('path');
     my $expires = $core->get('expires');
     if( ref( $content ) eq 'HASH' ) {
-        my $str = '';
+        my @set;
         for my $key ( keys %$content ) {
-            $str .= "$key=";
+            my $str = "$key=";
             my $val = $content->{ $key };
             $val =~ s|([=&\\])|\\$1|g;
-            $str .= "$val&";
+            $str .= $val;
+            push( @set, $str );
         }
+        $content = join( '&', @set );
     }
      
     #my $raw = uri_escape( $content );

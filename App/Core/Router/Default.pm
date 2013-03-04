@@ -39,23 +39,15 @@ sub init {
     print "Base: $base\n";
 }
 
-#my $body = $router->route( path => $path, query => $uri->{'query'}, post => $post );
 sub route {
     my ( $core, $self ) = @_;
-    my $sman = $core->get('session_man');
-    
-    my $r = $self->{'r'};
-    my $path = $r->{'path'};
+    my $sman  = $core->get('session_man');
+    my $r     = $self->{'r'};
+    my $path  = $r->{'path'};
     my $query = $r->{'query'};
-    my $post = $r->{'post'};
-       
-    my $app = $self->{'obj'}{'_app'}; # perhaps $core->getapp() would be better here
-    
-    #my $cookies = $r->{'cookies'};
-    
-    # my $out = '';
-    
-    my $rs = $self->{'src'}{'path_routes'};
+    my $post  = $r->{'post'};
+    my $app   = $self->{'obj'}{'_app'}; # perhaps $core->getapp() would be better here
+    my $rs    = $self->{'src'}{'path_routes'};
     
     my $base = $self->{'src'}{'base'};
     if( $base ne '' && $path =~ m|^/$base/(.+)| ) {
@@ -79,21 +71,19 @@ sub route {
         print "Testing $joined\n";
         my $info;
         if( $info = $rs->{ $joined } ) {
-            my $objname = $info->{'obj'};
-            my $obj = $r->getmod( mod => $objname );
-            my $func = $info->{'func'};
-            my $session_name = $info->{'session'};
-            my $bounce = $info->{'bounce'};
+            my $objname      = $info->{'obj'};
+            my $obj          = $r->getmod( mod => $objname );
+            my $func         = $info->{'func'};
+            my $session_name = $info->{'session'} || 'DEFAULT';
+            my $bounce       = $info->{'bounce'};
             
-            my $session = $sman->get_session( r => $r, cookie => $session_name );
+            my $session      = $sman->get_session( r => $r, cookie => $session_name );
             if( $session ) {
                 print "Loaded a session\n";
                 $session->show();
             }
             if( $bounce && !$session ) {
                 print "Bounce to $bounce\n";
-                #$core->set('type', 'redirect' );
-                #$core->set('url', $bounce );
                 $r->redirect( url => $bounce );
                 return;
             }
@@ -103,12 +93,7 @@ sub route {
                 return;
             }
             
-            # print "Found func $func to call\n";
             my $res = $obj->$func();
-            #my $html = $res->getres('html') || '';
-            #$out .= $html;
-            #my $newcookie = $res->getres('cookie');
-            #print "Trying to add a cookie\n";
             $resolved = 1;
             last;
         }
@@ -126,10 +111,6 @@ sub route {
         $out .= "Post: $post<br>";
         $r->out( text => $out );
     }
-    
-    #print "route got called\n";
-    #$core->set('body', $out );
-    #return $out;
 }
 
 # Note that this should only be called from init functions

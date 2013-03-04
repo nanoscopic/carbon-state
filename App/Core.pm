@@ -25,12 +25,12 @@ App::Core - Application framework built around Class::Core wrapper system
 =cut
 
 use lib '..';
-use App::Core::Router::Default;
-use App::Core::Log::Default;
-use App::Core::Session::Manager::Default;
-use App::Core::Cookie::Manager::Default;
-use App::Core::Request::Manager::Default;
-use App::Core::Admin::Default;
+#use App::Core::Router::Default;
+#use App::Core::Log::Default;
+#use App::Core::Session::Manager::Default;
+#use App::Core::Cookie::Manager::Default;
+#use App::Core::Request::Manager::Default;
+#use App::Core::Admin::Default;
 use Carp;
 
 package App::Core;
@@ -79,147 +79,132 @@ sub run {
     $SIG{'INT'} = 'App::Core::INT_handler';
     
     my $conf_file = $core->get('config');
-    my ( $ob, $xml ) = new XML::Bare( file => $conf_file );
+    my $core_file = $core->get('core') || 'core.xml';
+    my ( $ob , $xml  ) = new XML::Bare( file => $conf_file );
+    my ( $cob, $cxml ) = new XML::Bare( file => $core_file );
+    $cxml = $cxml->{'xml'};
+    $xml = $xml->{'xml'};
+    
+    my $modes = forcearray( $xml->{'mode'} );
+    my $cmodes = forcearray( $cxml->{'mode'} );
+    
+    my %modehash;
+    my %cmodehash;
+    for my $mode  ( @$modes  ) { my $name = xval $mode ->{'name'}; $modehash { $name } = $mode;  }
+    for my $cmode ( @$cmodes ) { my $name = xval $cmode->{'name'}; $cmodehash{ $name } = $cmode; }
+    
+    my $cur_mode;
+    my $cur_cmode;
+    if( $modehash {'default'} ) { $cur_mode  = $modehash {'default'}; }
+    if( $cmodehash{'default'} ) { $cur_cmode = $cmodehash{'default'}; }
     
     my $glob = $app->{'obj'}{'_glob'};
     
-    $glob->{'conf'} = $xml = $xml->{'xml'};
+    $glob->{'conf'} = $xml;
     my $r = $app->{'r'} = 'init';
     my $session = $app->{'session'} = 'init';
-    my $modules = forcearray( $xml->{'module'} );
+    
+    my $imodules = forcearray( $cxml->{'module'} );
+    my $modules  = forcearray( $xml->{'module'} );
     
     my $log = 0;
-    
-    my %order;
-    my @mod_names;
-    my %mod_hash;
-    for my $module ( @$modules ) {
-        my $name = xval $module->{'name'};
-        my $file = xval $module->{'file'}, $name;
-        my $order = $module->{'order'};
-        my $init = xval( $order->{'init'} ) || 0;
-        my $call = $module->{'call'};
-        my $listen = $module->{'listen'};
-        #my $init_session = xval $order->{'init_session'};
-        $order{ $name } = $init;
-        $mod_hash{ $name } = { file => $file, name => $name, init => $init, call => $call, listen => $listen, xml => $module };
-        push( @mod_names, $name ) if( $name !~ m/^(log)$/ );
-    }
-    @mod_names = sort { $order{ $a } <=> $order{ $b } } @mod_names;    
-    
-    #my $virt = $core->{'virt'};
-    
-    #print Dumper( $app );
+        
     $glob->{'create'} = \&create_test;
     
     my $modhash = $app->{'modhash'} = {};
     
-    my $wr_xml = $xml->{'web_request'};
-    my $wr_mod = 'mongrel2';
-    my $webmod = "";
-    if( $wr_xml ) {
-        $wr_mod = xval $wr_xml->{'mod'}, 'mongrel2';
+    my %order_by_name;
+    my %mod_by_order;
+    
+    my $maxmod = 0;
+    
+    for my $imod ( @$imodules ) {
+        my $name = xval $imod->{'name'};
+        $maxmod++;
+        print "Internal module $name #$maxmod\n";
+        
+        $mod_by_order{ $maxmod } = { xml => $imod, type => 'internal' };
+        $order_by_name{ $name } = $maxmod;
     }
     
-    my $rpc_xml = $xml->{'rpc'};
-    my $rpc_mod = 'mongrel2';
-    my $rpcmod = '';
-    if( $rpc_mod eq 'mongrel2' ) {
-        #eval('use App::Core::RPC::IO::Mongrel2;');
-        use App::Core::RPC::IO::Mongrel2;
-        $rpcmod = 'App::Core::RPC::IO::Mongrel2';
-    }
-    
-    if( $wr_mod eq 'mongrel2' ) {
-        use App::Core::Request::IO::Mongrel2;
-        $webmod = 'App::Core::Request::IO::Mongrel2';
-    }
-    elsif( $wr_mod eq 'http_server' ) {
-        eval('use App::Core::Request::IO::HTTP_Server_Simple;');
-        $webmod = 'App::Core::Request::IO::HTTP_Server_Simple';
-    }
-    
-    # Load all of the builtin modules
-    my @builtins = (
-            { name => 'log'         , mod => 'App::Core::Log::Default' },
-            #{ name => 'api_request', mod => 'App::Core::API::ZMQ' }, # handle api requests
-            #{ name => 'api_router' , mod => 'App::Core::API::Dist' }, # api core handler
-            #{ name => 'perm'       , mod => 'App::Core::Perm::Default' }, # the module that figures out permissions
-            { name => 'session_man' , mod => 'App::Core::Session::Manager::Default' }, # the module that creates sessions
-            { name => 'cookie_man'  , mod => 'App::Core::Cookie::Manager::Default' },
-            { name => 'request_man' , mod => 'App::Core::Request::Manager::Default' },
-            { name => 'web_request' , mod => $webmod }, # handle "web requests" ( FCGI / Mongrel2 0MQ / ... )
-            { name => 'web_router'  , mod => 'App::Core::Router::Default' },
-            { name => 'core_admin'  , mod => 'App::Core::Admin::Default' },
-            { name => 'rpc'         , mod => $rpcmod },
-            #{ name => 'auth'       , mod => '' } # the default module that authenticates users
-            #{ name => 'locking'    , mod => '' } # module to handle object locking/concurrency
-        );
-    BT: for my $builtin ( @builtins ) {
-        my $name = $builtin->{'name'};
-        my $modpath = $builtin->{'mod'};
-        my $mod_info = $mod_hash{$name};
-        my $mod;
-        my $type = 'custom';
-        if( $mod_info && $mod_info->{'file'} ne 'builtin' ) { # don't use built in
-            
-            my $res = load_module( $glob, $mod_info, $app );
-            
-            if( !$res && $log ) {
-                $log->error( text => "Cannot load Module $name" );
-                next;
+    for my $emod ( @$modules ) {
+        my $name = xval $emod->{'name'};
+        print "External module $name\n";
+        my $order = $order_by_name{ $name };
+        if( $order ) { 
+            if( $emod->{'file'} ) { # over-riding an internal module
+                print "  Overwriting internal module #$order\n";
+                $mod_by_order{ $order } = { xml => $emod, type => 'custom' };
             }
-            $mod = $mod_info->{'ob'};
-            $mod->{'r'} = $r; $mod->{'session'} = $session; # Note we are just copying 'init' into all of these
-            if( $name eq 'log' ) { $log = $mod; }
-        }
-        else { # use built in
-            my $modxml = {};
-            if( $mod_info ) { $modxml = $mod_info->{'xml'}; }
-            {
-                no strict 'refs';
-                my $hash = \%{"$modpath\::"};
-                if( !$hash->{'new'} ) {
-                    $log->error( text => "$modpath is not built in");
-                    next BT;
+            else {
+                print "  Custom config for module\n";
+                my $imod = $mod_by_order{ $order };
+                my $a = $imod->{'xml'};
+                my $b = $emod;
+                if( $a && $b ) {
+                    %$a = ( %$a, %$b ); # shove in new configuration
                 }
+                else {
+                    $imod->{'xml'} = $a || $b;
+                }
+                print Dumper( $a );
             }
-            #my $newref = \&{"$modpath\::new"};
-            #$mod = $newref->( $modpath );
-            $mod = $modpath->new( obj => { _glob => $glob, _app => $app }, r => $r, session => $session, xml => $modxml ); # Don't use callback for builtins - #_callback => $callback, 
-            if( $name eq 'log' ) { $log = $mod; }
-            $type = 'default';
         }
-        $mod->init( conf => $xml->{ $name }, lev => 0 );
-        $modhash->{ $name } = $mod;
-        $log->note( text => "Loaded $type $name module" ) if( $log );
-    }    
+        else {
+            $mod_by_order{ ++$maxmod } = { xml => $emod, type => 'default' };
+        }
+    }
     
-    # where do I set the log so that stuff can get to it???? TODO TODO
-    $log = $glob->{'log'} = $modhash->{'log'};
-    
-    # Register everything into the API
-                    
     my @listening;
-    for my $mod_name ( @mod_names ) {
-        my $mod_info = $mod_hash{ $mod_name };
-        next if( $mod_info->{'file'} eq 'builtin' );
-        if( $mod_info->{'listen'} ) {
+    
+    for( my $k=1;$k<=$maxmod;$k++ ) {
+        my $mod;
+        my $base     = $mod_by_order{ $k };
+        my $modxml   = $base->{'xml'};
+        my $type     = $base->{'type'};
+        my $mod_name = xval( $modxml->{'name'} ); #print "modname: $mod_name\n";
+        my $file     = xval( $modxml->{'file'}, $mod_name );
+        my $call     = $modxml->{'call'};
+        my $listen   = $modxml->{'listen'};
+        #print "modname: $mod_name, file: $file\n";
+        my $mod_info = { file => $file, name => $mod_name, call => $call, listen => $listen, xml => $modxml, type => $type };
+        
+        if( $modxml->{'listen'} ) {
             push( @listening, $mod_info );
         }
+        
+        #print "1";
         my $res = load_module( $glob, $mod_info, $app );
-        $mod_info->{'ob'}->{'r'} = $r; $mod_info->{'ob'}->{'session'} = $session;
-        if( !$res && $log ) {
-            $log->error( text => "Cannot load Module $mod_name" );
+        #print "2";
+        if( !$res ) {
+            if( 0 && $log ) {
+                $log->error( text => "Cannot load Module $mod_name - type: $type\m $@\n" ) 
+            }
+            else {
+                print "Cannot load Module $mod_name $file - type: $type\n $@\n";
+            }
             next;
         }
-        my $init = $mod_info->{'init'};
-        $log->note( text => "Loaded module: $mod_name, order=$init" );
+        #print "3";
+        $mod = $mod_info->{'ob'};
+        $mod->{'r'} = $r; $mod->{'session'} = $session;
+        
         if( !$mod_info->{'call'} ) {
-            $mod_info->{'ob'}->init( lev => 0 );
+            $mod->init( conf => $modxml, lev => 0 ); # passing modxml here is redunant; it happens above
         }
-        $modhash->{ $mod_name } = $mod_info->{'ob'};
+        
+        if( $mod_name eq 'log' ) { $log = $glob->{'log'} = $mod; }
+        #print "mod: $mod\n";
+        $modhash->{ $mod_name } = $mod;
+        if( 0 && $log ) { 
+            $log->note( text => "Loaded $type $mod_name module" );
+        }
+        else {
+            print "Loaded $type $mod_name module\n";
+        }
     }
+        
+    # Register everything into the API TODO
     
     if( @listening ) {
         my $rpc = $modhash->{'rpc'};
@@ -237,16 +222,9 @@ sub run {
     
     #$app->{'mods'} = \%modhash;
     
-    my $modes = forcearray( $xml->{'mode'} );
-    
-    my %modehash;
-    for my $mode ( @$modes ) {
-        my $name = xval $mode->{'name'};
-        $modehash{ $name } = $mode;
-    }
-    
-    if( $modehash{'default'} ) {
-        $app->runmode( mode => $modehash{'default'} );
+    if( $cur_mode ) {
+        print "Running mode\n";
+        $app->runmode( mode => $cur_mode );
     }
     
     return 0;
@@ -342,17 +320,17 @@ sub load_module {
     #print Dumper( $core );
     my $file = $info->{'file'};
     if( !$used_mods{ $file } ) {
-        eval("use Module::$file;");
-        if( $! ) {
+        eval("use $file;");
+        if( $@ ) { # was $! before
             return 0;
         }
     }
     $used_mods{ $file } = 1;
-    my $newref = \&{"Module::$file\::new"};
-    my $callback = ( $info->{'name'} eq 'log' ) ? 0 : \&check; # Don't do logging of custom log modules ( they are a special case )
+    my $newref = \&{"$file\::new"};
+    my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
     my $call = $info->{'call'};
-    my $listen = $info->{'listen'};
-    $info->{'ob'} = $newref->( "Module::$file", obj => { _callback => $callback, _glob => $glob, _app => $app }, _call => $call, _callfunc => \&callfunc );
+    #my $listen = $info->{'listen'};
+    $info->{'ob'} = $newref->( $file, obj => { _callback => $callback, _glob => $glob, _app => $app }, _call => $call, _callfunc => \&callfunc, _xml => $info->{'xml'} );
     return 1;
 }
 

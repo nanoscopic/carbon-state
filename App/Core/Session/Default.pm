@@ -28,12 +28,14 @@ package App::Core::Session::Default;
 use strict;
 use Class::Core qw/:all/;
 use vars qw/$VERSION/;
+use XML::Bare;
+use Data::Dumper;
 $VERSION = "0.02";
 
 sub construct {
     my ( $core, $self ) = @_;
-    $self->{'dat'} = 'blahblah';
-    print "Constructing a session\n";
+    $self->{'dat'} = { test => 'blahblah' };
+    #print "Constructing a session\n";
 }
 
 # called at the end of a session
@@ -47,19 +49,25 @@ sub register_cleanup {
 sub show {
     my ( $core, $self, ) = @_;
     my $dat = $self->{'dat'};
-    print "Session: $dat\n";
+    print "Session:\n  ".Dumper( $dat );
 }
 
 sub de_serialize {
     my ( $core, $self ) = @_;
     my $raw = $core->get('raw');
-    $self->{'dat'} = $raw;
+    my ( $ob, $xml ) = new XML::Bare( text => $raw );
+    $self->{'dat'} = App::Core::simplify( $xml );
     return $self;
 }
 
 sub serialize {
     my ( $core, $self ) = @_;
-    return $self->{'dat'};
+    return Class::Core::_hash2xml( $self->{'dat'} );
+}
+
+sub getid {
+    my ( $core, $self ) = @_;
+    return $self->{'id'};
 }
 
 1;

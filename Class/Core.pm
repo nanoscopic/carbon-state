@@ -73,7 +73,7 @@ sub AUTOLOAD {
     else {
     
         print "Attempt to call remote function $tocall on class $cls\n";
-        my $xml = _hash2xml( \%parms );
+        my $xml = Class::Core::_hash2xml( \%parms );
         print "Args:$xml\n";
         
         my $callfunc = $virt->{'_callfunc'};
@@ -85,31 +85,6 @@ sub AUTOLOAD {
     }
     
     return $inner->{'res'} ? $inner : $inner->{'ret'};
-}
-
-sub _hash2xml {
-    my ( $node, $name ) = @_;
-    my $ref = ref( $node );
-    my $txt = $name ? "<$name>" : '';
-    if( $ref eq 'ARRAY' ) {
-       for my $sub ( @$node ) {
-           $txt .= _hash2xml( $sub, $name );
-       }
-    }
-    elsif( $ref eq 'HASH' ) {
-       for my $key ( keys %$node ) {
-           $txt .= _hash2xml( $node->{ $key }, $key );
-       }
-    }
-    else {
-        if( $node =~ /[<]/ ) { $txt .= '<![CDATA[' . $node . ']]>'; }
-        else { $txt .= $node; }
-    }
-    if( $name ) {
-        $txt .= "</$name>";
-    }
-        
-    return $txt;
 }
 
 sub _duplicate {
@@ -145,10 +120,10 @@ sub DESTROY {
     #my $tid = $thr->tid();
     #return if( $tid ); # this is only required really if we are using ithreads ( eg: win32 )
     if( $virt->{'src'} ) {
-        print "Attempting to destroy request copy an object of type $cls\n";
+        #print "Attempting to destroy request copy an object of type $cls\n";
     }
     else {
-        print "Attempting to destroy an object of type $cls\n";
+        #print "Attempting to destroy an object of type $cls\n";
     }
 } # If this is not defined, AUTOLOAD gets called for it and creates problems ( on Win32 at any rate )
 
@@ -605,6 +580,31 @@ sub new {
     if( $map->{'construct'} ) { $hashref->construct(); }
     
     return $hashref;
+}
+
+sub _hash2xml {
+    my ( $node, $name ) = @_;
+    my $ref = ref( $node );
+    my $txt = $name ? "<$name>" : '';
+    if( $ref eq 'ARRAY' ) {
+       for my $sub ( @$node ) {
+           $txt .= _hash2xml( $sub, $name );
+       }
+    }
+    elsif( $ref eq 'HASH' ) {
+       for my $key ( keys %$node ) {
+           $txt .= _hash2xml( $node->{ $key }, $key );
+       }
+    }
+    else {
+        if( $node =~ /[<]/ ) { $txt .= '<![CDATA[' . $node . ']]>'; }
+        else { $txt .= $node; }
+    }
+    if( $name ) {
+        $txt .= "</$name>";
+    }
+        
+    return $txt;
 }
 
 1;

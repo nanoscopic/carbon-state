@@ -128,7 +128,7 @@ sub server {
     my $ctx = $self->{'ctx'} = zmq_init();
     my $incoming = $self->{'incoming'} = zmq_socket( $ctx, ZMQ_PULL );
     
-    my $xml = $self->{'xml'};
+    my $xml = $self->{'_xml'};
     my $ip = xval $xml->{'ip'};
     print "Ip: $ip\n";
     
@@ -172,7 +172,7 @@ sub handle_request {
     my $outgoing = $self->{'outgoing'};
     
     #my $sid = $server->{'id'};
-    print "Server: $sid - $tid\n";
+    #print "Server: $sid - $tid\n";
     
     my $buffer = '';
     while( 1 ) {
@@ -224,9 +224,9 @@ sub handle_request {
     
     $log->note( text => "Recieved request to $path");
             
-    print "Data:$data\n";
+    #print "Data:$data\n";
     my $hash = decode_tnetstrings( $data );
-    print Dumper( $hash );
+    #print Dumper( $hash );
     
     my $queryhash = 0;
     if( $hash && $hash->{'QUERY'} ) {
@@ -332,7 +332,7 @@ sub handle_request {
     my $idlen = length( $id );
         
     my $msg = "blah2 $idlen:$id, HTTP/1.1 $code\r\n$raw";
-    print "Msg: $msg\n";
+    #print "Msg: $msg\n";
     
     zmq_send( $outgoing, $msg );
     

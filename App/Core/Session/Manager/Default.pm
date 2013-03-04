@@ -64,10 +64,11 @@ sub get_session {
     my $active_cookie = $cookieman->get( name => $cookie );
     if( $active_cookie ) {
         my $content = $active_cookie->{'content'};
-        print "Found cookie with name $cookie: $content\n";
-        my $chash = $cookieman->decode( raw => $content );
+        print "Found cookie with name $cookie:\n  ";
+        #my $chash = $cookieman->decode( raw => $content );
+        print Dumper( $content );
         my $sid;
-        if( $sid = $chash->{'session_id'} ) {
+        if( $sid = $content->{'session_id'} ) {
             $id = $sid;
         }
     }
@@ -80,21 +81,21 @@ sub get_session {
     }
     my $session;
     
-    print "w sessions=".$self->{'sessions'}."\n";
+    print "sessions =\n  ".Dumper( $self->{'sessions'} )."\n";
     lock $self->{'sessions'};
     my $raw;
     if( $raw = $self->{'sessions'}{ $id } ) {
-        print "w Fetched session for $id\n";
+        print "Fetched session for $id\n";
         my $session = App::Core::Session::Default->new( id => $id );
         $session->de_serialize( raw => $raw );
         return $session;
     }
     else {
-        print "w No session found under id '$id'\n";
+        print "No session found under id '$id'\n";
         print Dumper( $self->{'sessions'} );
     }
     
-    print "No existing session\n";
+    # print "No existing session\n";
     return 0;
     #print "ip: $ip\n";
 }
@@ -105,17 +106,31 @@ sub create_session {
     if( $self->{'src'} ) {
         print "There is a source\n";
     }
-    my $id = $core->get('id');
-    my $session = App::Core::Session::Default->new( id => $id );
+    my $session;
     
     {
-        print "w Added session with id $id\n";
         lock $dat->{'sessions'};
+        my $id = random_str( $dat->{'sessions'} );
+        $session = App::Core::Session::Default->new( id => $id );
+        print "##############       Added session with id $id\n";
+        
         my $raw = $session->serialize();
         $dat->{'sessions'}{ $id } = $raw;
     }
     
     return $session;
+}
+
+sub random_str {
+    my $hash = shift;
+    my $str = '';
+    while( !$str ) {
+        for( my $i=0;$i<10;$i++ ) {
+            $str .= chr( 50 + rand( 77 ) ); # ascii 50 to 126 ( all printable )
+        }
+        $str = '' if( $hash && $hash->{$str} );
+    }
+    return $str."=";
 }
 
 sub save_session {

@@ -75,12 +75,16 @@ sub login {
         $r->out( text => "Login attempt by $user<br>" );
         if( $user eq 'admin' && $pw eq 'pass' ) {
             $r->out( text => "Admin login success<br>" );
-            my $cookie = $cookieman->create( name => 'ADMIN', content => 'session_id=admin', path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
-            $cookieman->clear();
-            $cookieman->add( cookie => $cookie );
+            
             my $sessionman = $r->getmod( mod => 'session_man' );
             $sessionman = $sessionman->{'src'}; # we want the global one, not the request specific one
-            $sessionman->create_session( id => 'admin' );
+            my $session = $sessionman->create_session();
+            my $sid = $session->getid();
+            
+            my $cookie = $cookieman->create( name => 'ADMIN', content => { session_id => $sid }, path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
+            $cookieman->clear();
+            $cookieman->add( cookie => $cookie );
+            
             $r->redirect( url => "admin" );
         }
     }
