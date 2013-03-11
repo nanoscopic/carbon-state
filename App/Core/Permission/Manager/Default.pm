@@ -28,9 +28,186 @@ package App::Core::Permission::Manager::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
+use XML::Bare qw/xval/;
+use Data::Dumper;
 $VERSION = "0.02";
 
 sub init {
+    my ( $core, $self ) = @_;
+    my $methods = $self->{'methods'} = [];
+    my $meth_hash = $self->{'meth_hash'} = {};
+    my $xml = $self->{'_xml'};
+    my $method = xval $xml->{'method'};
+    my @meths = split( /,/,$method );
+    my $prefixes = $self->{'prefixes'} = {};
+    for my $methname ( @meths ) {
+        my $meth = $core->getmod( $methname );
+        my $prefix_list = $meth->get_prefixes();
+        for my $prefix ( @$prefix_list ) {
+            $prefixes->{ $prefix } = $meth;
+        }
+        push( @$methods, $meth );
+        $meth_hash->{ $methname } = $meth;
+    }
+    if( ! keys %$prefixes ) {
+        undef $self->{'prefixes'};
+    }
+}
+
+# get a list of all known permissions
+sub list_permissions {
+    my ( $core, $self ) = @_;
+    $Data::Dumper::Maxdepth = 2;
+    #print Dumper( $self );
+     # go through chosen method modules and get groups
+    my @perms;
+    my $meths = $self->{'methods'};
+    my %hash;
+    for my $meth ( @$meths ) {
+        my $meth_perms = $meth->list_permissions();
+        for my $key ( keys %$meth_perms ) {
+            $hash{ $key } = $meth_perms->{ $key };
+        }
+        #print Dumper( $meth_perms );
+        #push( @perms, @$meth_perms );
+    }
+    return \%hash;
+}
+
+sub group_list {
+    # may not wish to list LDAP groups since there would be tons...
+}
+
+# get a list of permissions provided by a specific group
+sub group_get_permissions {
+    my ( $core, $self ) = @_;
+    my $group = $core->get('group');
+    my $meth = $self->group_select_method( group => $group );
+    return $meth->group_get_permissions( group => $group );
+}
+
+# Figure out which method handles this group based upon the group prefix
+sub group_select_method {
+    my ( $core, $self ) = @_;
+    my $group = $core->get('group');
+    my $pref = $self->{'prefixes'};
+    my $meth;
+    if( $group =~ m/^([a-z]+)_(.+)/ ) {
+        my $prefix = $1;
+        $meth = $pref->{ $prefix };
+    }
+    else {
+        $meth = $pref->{ 'none' };
+        if( !$meth ) {
+            die "No permission method set to handle groups with no prefix";
+        }
+    }
+    return $meth;
+}
+
+# get a list of all of the members of a group
+sub group_get_members {
+    # figure out which method handles this group and send it off to that
+    
+}
+
+sub group_add_permission {
+}
+
+sub group_delete_permission {
+}
+
+sub group_add {
+}
+
+sub group_delete {
+}
+
+# get all the permissions provided by belonging to multiple groups
+sub groupset_get_permissions {
+}
+
+sub user_list {
+    # may not wish to list ldap users since there would be many
+}
+
+sub user_add {
+}
+
+sub user_delete {
+}
+
+# get all permissions associated with a user
+sub user_get_permissions {
+    my ( $core, $self ) = @_;
+    my $user = $core->get('user');
+    my $groups = $self->user_get_groups( user => $user );
+    my $perms = $self->groupset_get_permissions( groups => $groups );
+    
+    # for each method, check direct user permissions
+    my $meths = $self->{'methods'};
+    for my $meth ( @$meths ) {
+        my $user_perms = $meth->user_get_permissions( user => $user );
+        # add user_perms into perms
+    }
+    
+    # for each method; run a check on the final user permissions before returning them
+    # method->integrate_permissions
+    
+    return $perms;
+}
+
+sub user_get_groups {
+    my ( $core, $self ) = @_;
+    my $user = $core->get('user');
+    # go through chosen method modules and get groups
+    my @groups;
+    my $meths = $self->{'methods'};
+    for my $meth ( @$meths ) {
+        my $meth_groups = $meth->user_get_groups( user => $user );
+        push( @groups, @$meth_groups );
+    }
+    return \@groups;
+}
+
+sub user_add_permission {
+    # add a new user permission of some type
+    # this will be passed to each method; first one to handle it "succeeds"
+}
+
+sub user_delete_permisson {
+}
+
+sub group_add_member {
+}
+
+sub group_delete_member {
+}
+
+sub user_exists {
+    my ( $core, $self ) = @_;
+    my $user = $core->get('user');
+    if( $user eq 'admin' ) {
+        return 1;
+    }
+    return 0;
+}
+
+sub check {
+    my ( $core, $self ) = @_;
+    my $user = $core->get('user');
+    my $pass = $core->get('password');
+    if( !$self->user_exists( user => $user ) ) {
+        $core->set('ok', 0 );
+        return;
+    }
+    if( $pass ne 'pass' ) {
+        $core->set('ok', 0 );
+        return;
+    }
+    
+    $core->set('ok',1);
+    return;
 }
 
 1;

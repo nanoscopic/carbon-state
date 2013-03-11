@@ -82,18 +82,17 @@ sub run {
     
     my $app = $core->getapp();
     $self->{'request_man'} = $app->getmod( mod => 'request_man' );
-    $self->{'log'} = $app->getmod( mod => 'log' );
+    my $log = $self->{'log'} = $app->getmod( mod => 'log' );
+    my $conf = $self->{'_xml'};
+    my $threads = xval $conf->{'threads'}, 2;
     
     #my $session_man = $app->getmod( mod => 'session_man' );
     #my $session_hash = $session_man->{'sessions'};
     
-    print "Spawning 10 threads to handle incoming requests";
-    for( my $i=0;$i<2;$i++ ) {
-    #my $i = 1;
-        print ".";
+    $log->note( text => "Spawning $threads thread(s) to handle incoming requests" );
+    for( my $i=0;$i<$threads;$i++ ) {
         threads->create( \&server, $self, $i );
     }
-    print "\n";
 }
 
 #my $server;
@@ -130,13 +129,27 @@ sub server {
     
     my $xml = $self->{'_xml'};
     my $ip = xval $xml->{'ip'};
-    print "Ip: $ip\n";
+    my $inconf = $xml->{'incoming'};
+    my $outconf = $xml->{'outgoing'};
+    my $inport = 6768;
+    my $inid = 'blah';
+    if( $inconf ) {
+        $inport = xval $inconf->{'port'}, 6768;
+        $inid = xval $inconf->{'id'}, 'blah';
+    }
+    my $outport = 6769;
+    my $outid = 'blah2';
+    if( $outconf ) {
+        $outport = xval $outconf->{'port'}, 6769;
+        $outid = xval $outconf->{'id'}, 'blah2';
+    }
+    $log->note( text => "Server $sid started - Listening on ip $ip - in: $inport($inid) - out: $outport($outid)" );
     
-    zmq_connect( $incoming, "tcp://$ip:6768" );
-    zmq_setsockopt( $incoming, ZMQ_IDENTITY, 'blah' ); # Indentity should not be hardcoded
+    zmq_connect( $incoming, "tcp://$ip:$inport" );
+    zmq_setsockopt( $incoming, ZMQ_IDENTITY, $inid ); # Indentity should not be hardcoded
     my $outgoing = $self->{'outgoing'} = zmq_socket( $ctx, ZMQ_PUB );
-    zmq_connect( $outgoing, "tcp://$ip:6769" );
-    zmq_setsockopt( $outgoing, ZMQ_IDENTITY, 'blah2' );
+    zmq_connect( $outgoing, "tcp://$ip:$outport" );
+    zmq_setsockopt( $outgoing, ZMQ_IDENTITY, $outid );
     
     #my $q = new CGI;
     while(1) {
@@ -144,7 +157,7 @@ sub server {
         #sleep(1);
         zmq_poll( [ { socket => $incoming, events => ZMQ_POLLIN, callback => \&handle_request } ], 1000 );
     }
-    print "Server $sid ending\n";
+    $log->note( text => "Server $sid ending" );
     
     zmq_close( $incoming );
     zmq_close( $outgoing );

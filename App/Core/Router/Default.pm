@@ -36,7 +36,9 @@ sub init {
     my ( $core, $self_src ) = @_;
     $self_src->{'path_routes'} = {};
     my $base = $self_src->{'base'} = xval( $core->getconf()->{'base'} );
-    print "Base: $base\n";
+    my $app = $core->getapp();
+    my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
+    $log->note( text => "Routing with web base of: $base" );
 }
 
 sub route {

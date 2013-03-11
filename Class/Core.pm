@@ -385,8 +385,7 @@ sub getall {
     return $inner->{'parms'};
 }
 
-# Right now this getconf function only exists for fetching configuration of an app object
-# In theory it should also fetch the configuration of a module; unsure if that works
+# This function fetches the global application conf
 sub getconf {
     my ( $inner, $name ) = @_;
     my $conf = $inner->{'virt'}{'obj'}{'_glob'}{'conf'};
@@ -399,6 +398,10 @@ sub set {
 sub getres {
     my ( $inner, $name ) = @_;
     return $inner->{'res'}{ $name } || undef; 
+}
+sub getallres {
+    my ( $inner, $name ) = @_;
+    return $inner->{'res'}; 
 }
 
 # get an array of items

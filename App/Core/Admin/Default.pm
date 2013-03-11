@@ -73,7 +73,10 @@ sub login {
         my $user = $postvars->{'user'};
         my $pw = $postvars->{'pw'};
         $r->out( text => "Login attempt by $user<br>" );
-        if( $user eq 'admin' && $pw eq 'pass' ) {
+        my $perm_man = $r->getmod( mod => 'perm_man' );
+        
+        my $res = $perm_man->check( user => $user, password => $pw );
+        if( $res->getres('ok') ) {
             $r->out( text => "Admin login success<br>" );
             
             my $sessionman = $r->getmod( mod => 'session_man' );

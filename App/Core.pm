@@ -86,17 +86,21 @@ sub run {
     $xml = $xml->{'xml'};
     
     my $modes = forcearray( $xml->{'mode'} );
-    my $cmodes = forcearray( $cxml->{'mode'} );
+    my $cmodes = forcearray( $cxml->{'mode'} ); # core modes
     
     my %modehash;
     my %cmodehash;
     for my $mode  ( @$modes  ) { my $name = xval $mode ->{'name'}; $modehash { $name } = $mode;  }
     for my $cmode ( @$cmodes ) { my $name = xval $cmode->{'name'}; $cmodehash{ $name } = $cmode; }
     
+    my $selected_mode = $core->get('mode') || 'default';
+    if( $selected_mode ne 'default' ) {
+        print "Starting system in mode '$selected_mode'\n";
+    }
     my $cur_mode;
     my $cur_cmode;
-    if( $modehash {'default'} ) { $cur_mode  = $modehash {'default'}; }
-    if( $cmodehash{'default'} ) { $cur_cmode = $cmodehash{'default'}; }
+    if( $modehash {$selected_mode} ) { $cur_mode  = $modehash {$selected_mode}; }
+    if( $cmodehash{$selected_mode} ) { $cur_cmode = $cmodehash{$selected_mode}; }
     
     my $glob = $app->{'obj'}{'_glob'};
     
@@ -104,9 +108,19 @@ sub run {
     my $r = $app->{'r'} = 'init';
     my $session = $app->{'session'} = 'init';
     
-    my $imodules = forcearray( $cxml->{'module'} );
+    my $imodules = forcearray( $cxml->{'module'} ); # internal core modules
     my $modules  = forcearray( $xml->{'module'} );
     
+    # grab modules in core config related to the current mode and add them to the internal module array being used
+    my $i_mode_modules = forcearray( $cur_cmode->{'module'} );
+    push( @$imodules, @$i_mode_modules );
+    
+    # grab modules in config related to the current mode and add them to the module array being used
+    my $mode_modules = forcearray( $cur_mode->{'module'} );
+    push( @$modules, @$mode_modules );
+    
+    #print Dumper( $modules );
+        
     my $log = 0;
         
     $glob->{'create'} = \&create_test;
@@ -121,7 +135,7 @@ sub run {
     for my $imod ( @$imodules ) {
         my $name = xval $imod->{'name'};
         $maxmod++;
-        print "Internal module $name #$maxmod\n";
+        #print "Internal module $name #$maxmod\n";
         
         $mod_by_order{ $maxmod } = { xml => $imod, type => 'internal' };
         $order_by_name{ $name } = $maxmod;
@@ -129,15 +143,15 @@ sub run {
     
     for my $emod ( @$modules ) {
         my $name = xval $emod->{'name'};
-        print "External module $name\n";
+        #print "External module $name\n";
         my $order = $order_by_name{ $name };
         if( $order ) { 
             if( $emod->{'file'} ) { # over-riding an internal module
-                print "  Overwriting internal module #$order\n";
+                #print "  Overwriting internal module #$order\n";
                 $mod_by_order{ $order } = { xml => $emod, type => 'custom' };
             }
             else {
-                print "  Custom config for module\n";
+                #print "  Custom config for module\n";
                 my $imod = $mod_by_order{ $order };
                 my $a = $imod->{'xml'};
                 my $b = $emod;
@@ -147,7 +161,7 @@ sub run {
                 else {
                     $imod->{'xml'} = $a || $b;
                 }
-                print Dumper( $a );
+                #print Dumper( $a );
             }
         }
         else {
@@ -177,8 +191,8 @@ sub run {
         my $res = load_module( $glob, $mod_info, $app );
         #print "2";
         if( !$res ) {
-            if( 0 && $log ) {
-                $log->error( text => "Cannot load Module $mod_name - type: $type\m $@\n" ) 
+            if( $log ) {
+                $log->error( text => "Cannot load Module $mod_name - type: $type\n $@\n" ) 
             }
             else {
                 print "Cannot load Module $mod_name $file - type: $type\n $@\n";
@@ -193,10 +207,12 @@ sub run {
             $mod->init( conf => $modxml, lev => 0 ); # passing modxml here is redunant; it happens above
         }
         
-        if( $mod_name eq 'log' ) { $log = $glob->{'log'} = $mod; }
+        if( $mod_name eq 'log' ) { 
+            $log = $glob->{'log'} = $mod;
+        }
         #print "mod: $mod\n";
         $modhash->{ $mod_name } = $mod;
-        if( 0 && $log ) { 
+        if( $log ) { 
             $log->note( text => "Loaded $type $mod_name module" );
         }
         else {
@@ -211,19 +227,20 @@ sub run {
         if( !$rpc ) {
             die "There are listening modules, but no rpc module setup";
         }
-        print "The following modules are listening on RPC:\n";
+        my $msg = "The following modules are listening on RPC: ";
         for my $mod_info ( @listening ) {
             my $mod_name = $mod_info->{'name'};
-            print "  $mod_name\n";
+            $msg .= "$mod_name ";
             $rpc->register_listener( modinfo => $modhash );
         }
+        $log->note( text => $msg );
+        
         $rpc->start_listening();
     }
     
-    #$app->{'mods'} = \%modhash;
-    
     if( $cur_mode ) {
-        print "Running mode\n";
+        #my $modename = xval $cur_mode->{'name'};
+        #$log->note( text => "Running mode named '$modename'" );
         $app->runmode( mode => $cur_mode );
     }
     
@@ -270,21 +287,62 @@ sub runmode {
     my $calls = forcearray( $init->{'call'} );
     #my $glob = $app->{'_glob'};
     my $mods = $app->{'modhash'};
+    
+    my %datahash;
     for my $call ( @$calls ) {
         my $modname = xval $call->{'mod'};
         my $func = xval $call->{'func'};
         #print "Running $func on $mod\n";
         my $args = $call->{'args'};
         my $arghash = $args ? simplify( $args ) : 0; # strip value references out of xml
+        fill_dollars( $arghash, \%datahash );
         
         my $mod = $mods->{ $modname } or confess( "Cannot get module $modname" );
         #my $funcref = 
         if( $args ) { 
             print Dumper( $arghash );
-            $mod->$func( %$arghash );
+            my $res = $mod->$func( %$arghash );
+            $datahash{'ret'} = $res;
+            if( ref( $res ) eq 'Class::Core::INNER' ) {
+                my $allres = $res->getallres();
+                mux( \%datahash, $allres );
+            }
+            print Dumper( \%datahash );
         }
         else { $mod->$func(); }
     }
+}
+
+sub mux {
+    my ( $a, $b ) = @_;
+    for my $key ( keys %$b ) {
+        $a->{ $key } = $b->{ $key };
+    }
+}
+
+sub fill_dollars {
+    my ( $hash, $data ) = @_;
+    return if( ref( $hash ) ne 'HASH' );
+    for my $key ( keys %$hash ) {
+        my $val = $hash->{ $key };
+        my $ref = ref( $val );
+        #print "ref:$ref - $val\n";
+        if( $ref eq '' && $val =~ m/^\$(.+)$/ ) {
+            my $name = $1;
+            if( $name =~ m/^arg([0-9]+)$/ ) {
+                $hash->{ $key } = $ARGV[ $1 ];
+            }
+            else {
+                if( defined( $data->{ $name } ) ) {
+                    $hash->{ $key } = $data->{ $name };
+                }
+            }
+        }
+        elsif( $ref eq 'HASH' ) {
+            fill_dollars( $val );
+        }
+    }
+    print Dumper( $hash );
 }
 
 sub simplify {
