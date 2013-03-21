@@ -81,7 +81,7 @@ sub group_list {
 # get a list of permissions provided by a specific group
 sub group_get_permissions {
     my ( $core, $self ) = @_;
-    my $group = $core->get('group');
+    my $group = $core->get('group'); # this is the text name of the group
     my $meth = $self->group_select_method( group => $group );
     return $meth->group_get_permissions( group => $group );
 }
@@ -99,7 +99,7 @@ sub group_select_method {
     else {
         $meth = $pref->{ 'none' };
         if( !$meth ) {
-            die "No permission method set to handle groups with no prefix";
+            die "No permission method set to handle groups with no prefix - gp=$group";
         }
     }
     return $meth;
@@ -125,6 +125,16 @@ sub group_delete {
 
 # get all the permissions provided by belonging to multiple groups
 sub groupset_get_permissions {
+    my ( $core, $self ) = @_;
+    my $groups = $core->get('groups');
+    my %permhash;
+    for my $gpname ( @$groups ) {
+        my $gp_perms = $self->group_get_permissions( group => $gpname );
+        for my $gp_perm ( keys %$gp_perms ) {
+            $permhash{ $gp_perm } = 1;
+        }
+    }
+    return \%permhash;
 }
 
 sub user_list {
@@ -141,20 +151,27 @@ sub user_delete {
 sub user_get_permissions {
     my ( $core, $self ) = @_;
     my $user = $core->get('user');
-    my $groups = $self->user_get_groups( user => $user );
-    my $perms = $self->groupset_get_permissions( groups => $groups );
+    
+    my $groups = $self->user_get_groups( user => $user ); # will return an array reference of group names
+    
+    my $perms = $self->groupset_get_permissions( groups => $groups ); # should take an array reference of group names
+        # returns a hash with the keys being the names of the permissions
     
     # for each method, check direct user permissions
     my $meths = $self->{'methods'};
     for my $meth ( @$meths ) {
         my $user_perms = $meth->user_get_permissions( user => $user );
+        #print Dumper( $user_perms );
         # add user_perms into perms
+        for my $user_perm ( keys %$user_perms ) {
+            $perms->{ $user_perm } = 1;
+        }
     }
     
     # for each method; run a check on the final user permissions before returning them
     # method->integrate_permissions
     
-    return $perms;
+    return $perms; # returns a hash of all of the user permissions ( the keys are the names of the permissions )
 }
 
 sub user_get_groups {
@@ -187,26 +204,28 @@ sub group_delete_member {
 sub user_exists {
     my ( $core, $self ) = @_;
     my $user = $core->get('user');
-    if( $user eq 'admin' ) {
-        return 1;
+    
+    my $meths = $self->{'methods'};
+    for my $meth ( @$meths ) {
+        return 1 if( $meth->user_exists( user => $user ) );
     }
     return 0;
 }
 
-sub check {
+sub user_check_pw {
     my ( $core, $self ) = @_;
+    $self = $self->{'src'} if( $self->{'src'} );
     my $user = $core->get('user');
-    my $pass = $core->get('password');
-    if( !$self->user_exists( user => $user ) ) {
-        $core->set('ok', 0 );
-        return;
-    }
-    if( $pass ne 'pass' ) {
-        $core->set('ok', 0 );
-        return;
+    my $pass = $core->get('pw');
+    my $meths = $self->{'methods'};
+    for my $meth ( @$meths ) {
+       if( $meth->user_check_pw( user => $user, pw => $pass ) ) {
+           $core->set('ok', 1 );
+           return;
+       }
     }
     
-    $core->set('ok',1);
+    $core->set('ok',0);
     return;
 }
 

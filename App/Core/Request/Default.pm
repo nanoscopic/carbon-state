@@ -150,4 +150,10 @@ sub get_code {
     }
 }
 
+sub set_permissions {
+    my ( $core, $r ) = @_;
+    my $perms = $core->get('perms');
+    $r->{'perms'} = $perms;
+}
+
 1;

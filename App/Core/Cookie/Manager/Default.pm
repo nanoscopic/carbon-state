@@ -58,6 +58,8 @@ sub parse {
         $rawcookie =~ m/^([A-Z_]+)=(.+)/;
         my $name = $1;
         my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
+        #print "Decoded cookie:\n";
+        #print Dumper( $cookie );
         #print "Found cookie named $name\n";
         $byname->{ $name } = $cookie;
         push( @cookies, $cookie );
@@ -89,6 +91,8 @@ sub add {
     my ( $core, $self ) = @_;
     my $cookie = $core->get('cookie');
     my $name = $cookie->{'name'};
+    #print "Adding cookie:\n";
+    #print Dumper( $cookie );
     $self->{'byname'}{$name} = $cookie;
     my $cookies = $self->{'cookies'};
     push( @$cookies, $cookie );
@@ -115,6 +119,29 @@ sub create {
     my $content = $core->get('content'); # ( can be text or a hash ref )
     my $path    = $core->get('path');
     my $expires = $core->get('expires');
+    #if( ref( $content ) eq 'HASH' ) {
+    #    my @set;
+    #    for my $key ( keys %$content ) {
+    #        my $str = "$key=";
+    #        my $val = $content->{ $key };
+    #        $val =~ s|([=&\\])|\\$1|g;
+    #        $str .= $val;
+    #        push( @set, $str );
+    #    }
+    #    $content = join( '&', @set );
+    #}
+     
+    #my $raw = uri_escape( $content );
+    
+    #my $c1 = $cookieman->create( name => 'MY_COOKIE', content => 'a=test1', path => '/', expires => 'Tue, 12-Feb-2013 19:51:45 GMT' );
+    #$headers .= "Set-Cookie: MY_COOKIE=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
+    #    $headers .= "Set-Cookie: B=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
+    return { name => $name, content => $content, path => $path, expires => $expires };
+}
+
+sub flatten {
+    my $cookie = shift;
+    my $content = $cookie->{'content'};
     if( ref( $content ) eq 'HASH' ) {
         my @set;
         for my $key ( keys %$content ) {
@@ -126,18 +153,12 @@ sub create {
         }
         $content = join( '&', @set );
     }
-     
-    #my $raw = uri_escape( $content );
-    
-    #my $c1 = $cookieman->create( name => 'MY_COOKIE', content => 'a=test1', path => '/', expires => 'Tue, 12-Feb-2013 19:51:45 GMT' );
-    #$headers .= "Set-Cookie: MY_COOKIE=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
-    #    $headers .= "Set-Cookie: B=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
-    return { name => $name, content => $content, path => $path, expires => $expires };
+    return $content;
 }
 
 sub toraw {
     my $info = shift;
-    my $rawcontent = uri_escape( $info->{'content'} );
+    my $rawcontent = uri_escape( flatten( $info->{'content'} ) );
     my $path = $info->{'path'};
     my $expires = $info->{'expires'};
     if( !$expires ) {
@@ -157,6 +178,19 @@ sub setheader {
         $headers .= "Set-Cookie: $raw\r\n" if( $raw );
     }
     return $headers;
+}
+
+# this returns -just- the cookie data
+sub rawcookies {
+    my ( $core, $self ) = @_;
+    my $cookies = $self->{'cookies'};
+    my @set;
+    for my $cookie ( @$cookies ) {
+        #print Dumper( $cookie );
+        my $raw = $cookie->{'name'}."=".uri_escape( flatten( $cookie ) );
+        push( @set, $raw ) if( $raw );
+    }
+    return \@set;
 }
 
 1;

@@ -30,8 +30,18 @@ use strict;
 use Data::Dumper;
 use XML::Bare qw/xval/;
 
-use vars qw/$VERSION/;
+use vars qw/$VERSION $spec/;
 $VERSION = "0.02";
+
+$spec = "
+    <group>core</group>
+    <func name='admin' perms='fsd'>
+        <api v='1' name='admin'/>
+    </func>
+    <func name='login'>
+        <api v=1 name='login'/>
+    </func>
+";
 
 sub init {
     my ( $core, $self ) = @_; # this self is src
@@ -40,16 +50,21 @@ sub init {
     $router->route_path( path => "login", obj => 'core_admin', func => 'login', session => 'ADMIN' );
     $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'ADMIN', bounce => 'login' );
     $self->{'base'} = xval( $core->getconf()->{'base'} );
+    
+    my $api = $core->getmod( 'core_api' );
+    $api->register_via_spec( mod => $self, session => 'ADMIN' );
 }
 
 sub admin {
     my ( $core, $self ) = @_;
     #$core->set('html', 'test' );
+    my $dump = Dumper( $self->{'r'}{'perms'} );
     $self->{'r'}->out( text => "
         <h2>App::Core Admin</h2>
         <ul>
         <li>test
         </ul>
+        $dump
         " );
 }
 
@@ -65,7 +80,7 @@ sub login {
         #print "Temp notice: $tmp\n";
         return;
     }
-    print Dumper( $r->{'postvars'} );
+    #print Dumper( $r->{'postvars'} );
     
     $r->out( text => '<h2>App::Core Admin Login</h2>' );
     if( $r->{'type'} eq 'post' ) {
@@ -75,17 +90,21 @@ sub login {
         $r->out( text => "Login attempt by $user<br>" );
         my $perm_man = $r->getmod( mod => 'perm_man' );
         
-        my $res = $perm_man->check( user => $user, password => $pw );
+        my $res = $perm_man->user_check_pw( user => $user, pw => $pw );
         if( $res->getres('ok') ) {
             $r->out( text => "Admin login success<br>" );
             
             my $sessionman = $r->getmod( mod => 'session_man' );
             $sessionman = $sessionman->{'src'}; # we want the global one, not the request specific one
             my $session = $sessionman->create_session();
+            $session->set_user( user => $user );
+            $session->save();
+            $r->set_permissions( perms => $perm_man->user_get_permissions( user => $user ) );
             my $sid = $session->getid();
             
             my $cookie = $cookieman->create( name => 'ADMIN', content => { session_id => $sid }, path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
             $cookieman->clear();
+            #print Dumper( $cookie );
             $cookieman->add( cookie => $cookie );
             
             $r->redirect( url => "admin" );

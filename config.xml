@@ -1,0 +1,76 @@
+<xml>
+    <base>perl</base>
+    <log>
+        <console/>
+        <win32color/>
+    </log>
+    
+    <mode name='test'>
+        <module name='core_api'    file='App::Core::API::Default' />
+        <module name='perm_flat'   file='App::Core::Permission::Method::Flatfile'  store='flat_perms.xml'/>
+        <module name='perm_man'    file='App::Core::Permission::Manager::Default' method='perm_flat' />
+        <module name='permtest' file='Module::permtest' />
+        
+        <module name='cookie_man'  file='App::Core::Cookie::Manager::Default'  />
+        <module name='request_man' file='App::Core::Request::Manager::Default' />
+        <module name='session_man' file='App::Core::Session::Manager::Default' />
+        <module name='web_request' file='App::Core::Request::IO::Virtual'>
+            <script>virtual_requests.xml</script>
+        </module>
+        <module name='web_router'  file='App::Core::Router::Default'           />
+        <module name='core_admin'  file='App::Core::Admin::Default'            />
+        
+        <init>
+            <!--<call mod='perm_man' func='list_permissions'/>-->
+            <!--<call mod='permtest' func='test'>
+                <args>
+                    <test>$arg1</test>
+                </args>
+            </call>-->
+            <call mod=web_request func=run />
+        </init>
+    </mode>
+    
+    <mode name='default'>
+        <web_request>
+            <mod>mongrel2</mod>
+        </web_request>
+        <rpc>
+            <mod>mongrel2</mod>
+        </rpc>
+        <!--<module name='test'>
+            <order init=10 init_session=1/>
+        </module>
+        <module name='test2'>
+            <order init=10 init_session=1/>
+        </module>-->
+        <module name='print_remote' file='Module::print'>
+            <listen port=901/>
+        </module>
+        <module name='print_local' file='Module::print'>
+            <call port=901 mod='print_remote'/>
+        </module>
+        <!--<module name='session_server' file='session_server'>
+            <listen port=901/>
+        </module>
+        <module name='session_local' file='session_server'>
+            <call port=901 mod='session_server'/>
+        </module>-->
+        <module name='web_request'>
+            <ip>172.22.27.152</ip>
+        </module>
+        <module name='core_admin'  file='App::Core::Admin::Default'            />
+        <init>
+            <!--<call mod='print_local' func='test1'>
+                <args>
+                    <parm>yoyo</parm>
+                    <blah a='<t'>
+                        <blah><![CDATA[10]]></blah>
+                    </blah>
+                </args>
+            </call>-->
+            <call mod=web_request func=run />
+            <call mod=web_request func=wait_threads/>
+        </init>
+    </mode>
+</xml>

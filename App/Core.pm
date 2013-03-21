@@ -31,7 +31,7 @@ use lib '..';
 #use App::Core::Cookie::Manager::Default;
 #use App::Core::Request::Manager::Default;
 #use App::Core::Admin::Default;
-use Carp;
+
 
 package App::Core;
 use Class::Core qw/:all/;
@@ -39,6 +39,7 @@ use Data::Dumper;
 use XML::Bare qw/xval forcearray/;
 use strict;
 use vars qw/$VERSION/;
+use Carp;
 $VERSION = "0.02";
 
 our $spec;
@@ -300,14 +301,14 @@ sub runmode {
         my $mod = $mods->{ $modname } or confess( "Cannot get module $modname" );
         #my $funcref = 
         if( $args ) { 
-            print Dumper( $arghash );
+            #print Dumper( $arghash );
             my $res = $mod->$func( %$arghash );
             $datahash{'ret'} = $res;
             if( ref( $res ) eq 'Class::Core::INNER' ) {
                 my $allres = $res->getallres();
                 mux( \%datahash, $allres );
             }
-            print Dumper( \%datahash );
+            #print Dumper( \%datahash );
         }
         else { $mod->$func(); }
     }
@@ -342,7 +343,7 @@ sub fill_dollars {
             fill_dollars( $val );
         }
     }
-    print Dumper( $hash );
+    #print Dumper( $hash );
 }
 
 sub simplify {
@@ -410,6 +411,18 @@ sub check {
     #print Dumper( $core );
     my $glob = $obj->{'_glob'};
     $glob->{'log'}->note( text => "Function call - $cls\::$func" );
+    my $spec = $core->{'_funcspec'};
+    #print Dumper( $spec ) if( $spec );
+    if( $spec->{'perms'} && $virt->{'r'} ) {
+        my $user_perms = $virt->{'r'}{'perms'};
+        my $func_perms = $spec->{'perms'};
+        for my $item ( @$func_perms ) {
+            if( !$user_perms->{ $item } ) {
+                $glob->{'log'}->error( text => "User does not have permission $item" );
+                return 0;
+            }
+        }
+    }
     return 1;
 }
 

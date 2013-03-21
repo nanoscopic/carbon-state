@@ -38,6 +38,7 @@ sub init {
     my $base = $self_src->{'base'} = xval( $core->getconf()->{'base'} );
     my $app = $core->getapp();
     my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
+    $self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
     $log->note( text => "Routing with web base of: $base" );
 }
 
@@ -50,6 +51,7 @@ sub route {
     my $post  = $r->{'post'};
     my $app   = $self->{'obj'}{'_app'}; # perhaps $core->getapp() would be better here
     my $rs    = $self->{'src'}{'path_routes'};
+    my $perm  = $self->{'src'}{'perm'};
     
     my $base = $self->{'src'}{'base'};
     if( $base ne '' && $path =~ m|^/$base/(.+)| ) {
@@ -83,6 +85,7 @@ sub route {
             if( $session ) {
                 print "Loaded a session\n";
                 $session->show();
+                $r->set_permissions( perms => $perm->user_get_permissions( user => $session->get_user() ) );
             }
             if( $bounce && !$session ) {
                 print "Bounce to $bounce\n";

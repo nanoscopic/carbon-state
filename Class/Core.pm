@@ -50,7 +50,7 @@ sub AUTOLOAD {
     
     # Skipping spec checking on remote calls, for now - TODO
         
-    my $inner = { parms => \%parms, _funcspec => $spec, virt => $virt };#_glob => $obj->{'_glob'}, 
+    my $inner = { parms => \%parms, _funcspec => ($spec ? $spec->{'funcs'}{$tocall} : 0), virt => $virt };#_glob => $obj->{'_glob'}, 
     bless $inner, "Class::Core::INNER";
     my $callback = $obj->{'_callback'};
     
@@ -186,7 +186,7 @@ sub AUTOLOAD {
     
     die $allerr if( $allerr );
         
-    my $inner = { parms => \%parms, _funcspec => $spec, virt => $virt };#_glob => $obj->{'_glob'}, 
+    my $inner = { parms => \%parms, _funcspec => $fspec, virt => $virt };#_glob => $obj->{'_glob'}, 
     bless $inner, "Class::Core::INNER";
     my $callback = $obj->{'_callback'};
     
@@ -197,7 +197,8 @@ sub AUTOLOAD {
         $okay = &$callback( $inner, $virt, $tocall, \%parms );
     }
     if( !$okay ) {
-        die "Call to $tocall in $cls failed due to callback\n";
+        #die "Call to $tocall in $cls failed due to callback\n";
+        return 0;
     }
     
     my $rval = $inner->{'ret'} = &$ref( $inner, $virt ); # call the function
@@ -366,7 +367,13 @@ sub _duplicate {
 # Parameter input and output container
 package Class::Core::INNER;
 use strict;
+use Data::Dumper;
 
+sub dumper {
+    my ( $inner, $name, $val ) = @_;
+    my ($package, $filename, $line) = caller;
+    print "Dump from $package #$line\n  $name:\n  " . Dumper( $val );
+}
 sub getapp {
     my ( $inner, $name ) = @_;
     return $inner->{'virt'}{'obj'}{'_app'};
@@ -454,7 +461,7 @@ $VERSION = '0.04';
 sub read_spec {
     my ( $func ) = @_;
     my ( %in, %out, %ret );
-    my $func_spec = { in => \%in, out => \%out, ret => \%ret };
+    my $func_spec = { in => \%in, out => \%out, ret => \%ret, x => $func };
     
     my $ins = forcearray( $func->{'in'} );
     for my $in ( @$ins ) {
@@ -486,6 +493,11 @@ sub read_spec {
         $func_spec->{'set'} = $func->{'set'};
     }
     
+    if( $func->{'perms'} ) {
+        my @arr = split(',', $func->{'perms'}{'value'} );
+        $func_spec->{'perms'} = \@arr;
+    }
+    
     return $func_spec;
 }
 
@@ -514,6 +526,7 @@ sub create_object {
         my $func_specs = {};
         my %spec = ( funcs => $func_specs );
         $obj{'_spec'} = \%spec;
+        $obj{'_specx'} = $xml;
         my $funcs = forcearray( $xml->{'func'} );
         for my $func ( @$funcs ) {
             my $name = xval $func->{'name'};

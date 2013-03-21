@@ -60,6 +60,21 @@ sub de_serialize {
     return $self;
 }
 
+sub get_user {
+    my ( $core, $self ) = @_;
+    return $self->{'dat'}{'user'};
+}
+
+sub set_user {
+    my ( $core, $self ) = @_;
+    $self->{'dat'}{'user'} = $core->get('user');
+}
+
+sub save {
+    my ( $core, $self ) = @_;
+    $self->{'man'}->save_session( id => $self->{'id'}, data => $self );
+}
+
 sub serialize {
     my ( $core, $self ) = @_;
     return Class::Core::_hash2xml( $self->{'dat'} );

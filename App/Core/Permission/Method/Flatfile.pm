@@ -32,6 +32,11 @@ use XML::Bare qw/forcearray xval/;
 $VERSION = "0.01";
 use Data::Dumper;
 use Set::Definition;
+use Digest::SHA1 qw/sha1_hex/;
+
+# TODO - currently all the code in this file does not update when permissions "change"
+# Also, if things did change all objects in all threads would need to be re-created due to this simply loading everything up
+# when the system is started. That is, currently the code here will -not- work for dynamic changing permissions.
 
 sub init {
     my ( $core, $self ) = @_;
@@ -43,6 +48,22 @@ sub init {
     $xml = $xml->{'xml'};
     #print Dumper( $xml );
     my $perms = forcearray( $xml->{'perm'} );
+    
+    my $users = $self->{'users'} = {};
+    my $user_arr = forcearray( $xml->{'user'} );
+    for my $user ( @$user_arr ) {
+        my $id = xval $user->{'id'};
+        my $pw = xval $user->{'pw'};
+        my $hash;
+        if( $pw ) {
+            $hash = $self->pass_hash( user => $id, pw => $pw );
+        }
+        else {
+            $hash = xval $user->{'hash'};
+        }
+        $users->{ $id } = { hash => $hash };
+    }
+    
     my $permhash = $self->{'permhash'} = {};
     for my $perm ( @$perms ) {
         my $name = xval $perm->{'name'};
@@ -54,10 +75,12 @@ sub init {
     my $simplegroups = $self->{'sgroups'} = []; # simple groups are groups that are just composed of members
     my $definedgroups = $self->{'dgroups'} = [];
     my $statichash = $self->{'static_groups'} = {}; # groups that are ultimately only dependent on a list of users
+    my $allgroups = $self->{'all_groups'} = {};
     
     for my $group ( @$groups ) {
         my $sgroup = App::Core::simplify( $group );
         my $name = $sgroup->{'name'};
+        $allgroups->{ $name } = $sgroup;
         
         my $lookup = { test => 27 };
         if( $group->{'define'} ) {
@@ -203,7 +226,7 @@ sub process_groups {
     # find all groups that are just a list of members
     my $sgroups = $self->{'sgroups'};
     
-    my $userhash = {};
+    my $userhash = $self->{'user_group_hash'} = {};
     # for each of those, build a hash of users and which of these groups they have access to
     for my $sgroup ( @$sgroups ) {
         my $gp_name = $sgroup->{'name'};
@@ -235,8 +258,8 @@ sub process_groups {
             }
         }
     }
-    $Data::Dumper::Maxdepth = 3;
-    print Dumper( $userhash );
+    #$Data::Dumper::Maxdepth = 2;
+    #print Dumper( $userhash );
 }
 
 sub get_prefixes {
@@ -258,6 +281,21 @@ sub group_list {
 
 # get a list of permissions provided by a specific group
 sub group_get_permissions {
+    my ( $core, $self ) = @_;
+    my $group = $core->get('group');
+    if( $group =~ m/^l_(.+)/ ) {
+        $group = $1;
+        my $allgroups = $self->{'all_groups'};
+        my $gp_info = $allgroups->{ $group };
+        my %hash;
+        my $perms = forcearray $gp_info->{'perm'};
+        for my $perm ( @$perms ) {
+            my $pname = $perm->{'name'};
+            $hash{$pname} = 1;
+        }
+        return \%hash;
+    }
+    return {};
 }
 
 # get a list of all of the members of a group
@@ -277,10 +315,6 @@ sub group_add {
 sub group_delete {
 }
 
-# get all the permissions provided by belonging to multiple groups
-sub groupset_get_permissions {
-}
-
 sub user_add {
 }
 
@@ -290,13 +324,22 @@ sub user_delete {
 # fetch all of the direct user permission that exist ( not ones that go through groups; that is done in the permission manager
 sub user_get_permissions {
     my ( $core, $self ) = @_;
-    
+    return {};
 }
 
 sub user_get_groups {
     my ( $core, $self ) = @_;
     my $user = $core->get('user');
-    
+    my $userhash = $self->{'user_group_hash'};
+    my $userinfo = $userhash->{ $user };
+    return [] if( !$userinfo );
+    my $gp_hash = $userinfo->{'groups'};
+    return [] if( !$gp_hash || !%$gp_hash );
+    my @arr;
+    for my $key ( keys %$gp_hash ) {
+        push( @arr, "l_$key" );
+    }
+    return \@arr;
 }
 
 sub user_add_permission {
@@ -315,16 +358,28 @@ sub group_delete_member {
 
 sub user_exists {
     my ( $core, $self ) = @_;
-    
+    my $user = $core->get('user');
+    my $users = $self->{'users'};
+    return $users->{ $user } ? 1 : 0;
 }
-
-sub check {
+sub pass_hash {
     my ( $core, $self ) = @_;
     my $user = $core->get('user');
-    my $pass = $core->get('password');
-        
-    $core->set('ok',1);
-    return;
+    my $pw = $core->get('pw');
+    my $salt = "fsjlfse";
+    return sha1_hex("$salt--$user--$pw--$salt");
+}
+
+sub user_check_pw {
+    my ( $core, $self ) = @_;
+    my $user = $core->get('user');
+    my $pw = $core->get('pw');
+    return 0 if( !$self->user_exists( user => $user ) ); 
+    my $hash = $self->pass_hash( user => $user, pw => $pw );
+    my $users = $self->{'users'};
+    my $userob = $users->{ $user };
+    return 1 if( $userob->{'hash'} eq $hash );
+    return 0;
 }
 
 1;

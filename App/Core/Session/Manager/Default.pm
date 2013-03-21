@@ -57,8 +57,8 @@ sub get_session {
     
     my $cookieman = $r->getmod( mod => 'cookie_man' );
     
-    print Dumper( $cookieman->{'cookies'} );
-    print Dumper( $cookieman->{'byname'} );
+    #print Dumper( $cookieman->{'cookies'} );
+    #print Dumper( $cookieman->{'byname'} );
     #$cookieman->showall();
     
     my $active_cookie = $cookieman->get( name => $cookie );
@@ -66,7 +66,7 @@ sub get_session {
         my $content = $active_cookie->{'content'};
         print "Found cookie with name $cookie:\n  ";
         #my $chash = $cookieman->decode( raw => $content );
-        print Dumper( $content );
+        #print Dumper( $content );
         my $sid;
         if( $sid = $content->{'session_id'} ) {
             $id = $sid;
@@ -81,18 +81,18 @@ sub get_session {
     }
     my $session;
     
-    print "sessions =\n  ".Dumper( $self->{'sessions'} )."\n";
+    #print "sessions =\n  ".Dumper( $self->{'sessions'} )."\n";
     lock $self->{'sessions'};
     my $raw;
     if( $raw = $self->{'sessions'}{ $id } ) {
         print "Fetched session for $id\n";
-        my $session = App::Core::Session::Default->new( id => $id );
+        my $session = App::Core::Session::Default->new( id => $id, man => $self );
         $session->de_serialize( raw => $raw );
         return $session;
     }
     else {
         print "No session found under id '$id'\n";
-        print Dumper( $self->{'sessions'} );
+        #print Dumper( $self->{'sessions'} );
     }
     
     # print "No existing session\n";
@@ -111,7 +111,7 @@ sub create_session {
     {
         lock $dat->{'sessions'};
         my $id = random_str( $dat->{'sessions'} );
-        $session = App::Core::Session::Default->new( id => $id );
+        $session = App::Core::Session::Default->new( id => $id, man => $self );
         print "##############       Added session with id $id\n";
         
         my $raw = $session->serialize();
