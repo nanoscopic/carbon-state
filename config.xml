@@ -19,7 +19,7 @@
         </module>
         <module name='web_router'  file='App::Core::Router::Default'           />
         <module name='core_admin'  file='App::Core::Admin::Default'            />
-        
+        <module name='str_table'   file='App::Core::StringTable::XML'         store='str_table.xml' />
         <init>
             <!--<call mod='perm_man' func='list_permissions'/>-->
             <!--<call mod='permtest' func='test'>

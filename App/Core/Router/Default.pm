@@ -80,6 +80,7 @@ sub route {
             my $func         = $info->{'func'};
             my $session_name = $info->{'session'} || 'DEFAULT';
             my $bounce       = $info->{'bounce'};
+            my $extra        = $info->{'extra'} || {};
             
             my $session      = $sman->get_session( r => $r, cookie => $session_name );
             if( $session ) {
@@ -98,7 +99,7 @@ sub route {
                 return;
             }
             
-            my $res = $obj->$func();
+            my $res = $obj->$func( %$extra );
             $resolved = 1;
             last;
         }
@@ -121,8 +122,13 @@ sub route {
 # Note that this should only be called from init functions
 sub route_path {
     my ( $core, $self_src ) = @_;
-    # path, obj, func
-    my ( $path, $obj, $func, $session, $bounce ) = $core->getarr( qw/path obj func session bounce/ );
+    # path    - the path to handle
+    # obj     - name of the module containing the handling function
+    # func    - the name of the function that handles the page
+    # session - the cookie name that contains a valid session key
+    # bounce  - whether or not to bounce if there is no key, and where to bounce to
+    # extra   - other information to pass along
+    my ( $path, $obj, $func, $session, $bounce, $extra ) = $core->getarr( qw/path obj func session bounce extra/ );
     
     #print "Adding path to $path\n";
     $self_src->{'path_routes'}{ $path } = {
@@ -130,7 +136,8 @@ sub route_path {
         func => $func, 
         session => $session, 
         bounce => $bounce,
-        folder => 1
+        folder => 1,
+        extra => $extra
     };
 }
 
