@@ -97,7 +97,7 @@ sub _duplicate {
 
 sub _hasfunc {
     my ( $ob, $tocall ) = @_;
-    my $spec = $ob->{'_spec'};
+    my $spec = $ob->{'obj'}{'_spec'};
     return $spec->{'funcs'}{ $tocall };
 }
 
@@ -137,7 +137,6 @@ sub AUTOLOAD {
     my $ref = $map->{ $tocall }; # grab the function reference
     my $cls = $obj->{'_class'};
     if( !$ref ) {
-        #print Dumper( $virt );
         confess "No function $tocall in $cls\n";
     }
     my $spec = $obj->{'_spec'};
@@ -213,9 +212,14 @@ sub AUTOLOAD {
     return $inner->{'res'} ? $inner : $inner->{'ret'};
 }
 
+sub get_source {
+    my ( $ob ) = @_;
+    return $ob->{'src'};
+}
+
 sub _hasfunc {
     my ( $ob, $tocall ) = @_;
-    my $spec = $ob->{'_spec'};
+    my $spec = $ob->{'obj'}{'_spec'};
     return $spec->{'funcs'}{ $tocall };
 }
 
@@ -249,7 +253,6 @@ sub _checkval {
     if( ! defined $val ) {
         if( $xml->{'optional'} ) { return 0; }
         #my @arr = caller;
-        #print Dumper( \@arr );
         return "not defined and should be a $type";
     }
     my $err = 'undefined';
@@ -368,20 +371,32 @@ sub _duplicate {
 package Class::Core::INNER;
 use strict;
 use Data::Dumper;
+use Carp;
 
+our $AUTOLOAD;
+
+sub AUTOLOAD {
+    my $virt = shift;
+    my $tocall = $AUTOLOAD;
+    #print "Tocall: $tocall\n";
+    if( $tocall =~ s/^Class::Core::INNER::// ) {
+        my $extend;
+        #print "******** Virt call to $tocall\n";
+        #$Data::Dumper::Maxdepth = 2;
+        $virt = $virt->{'virt'};
+        #print Dumper( $virt );
+        if( $extend = $virt->{'_extend'} ) {
+            return $extend->$tocall( $virt, @_ );
+        }
+        confess "No extension - $tocall";
+    }
+}
+sub DESTROY {
+}
 sub dumper {
     my ( $inner, $name, $val ) = @_;
     my ($package, $filename, $line) = caller;
     print "Dump from $package #$line\n  $name:\n  " . Dumper( $val );
-}
-sub getapp {
-    my ( $inner, $name ) = @_;
-    return $inner->{'virt'}{'obj'}{'_app'};
-}
-sub getmod {
-    my ( $inner, $name ) = @_;
-    my $app = $inner->{'virt'}{'obj'}{'_app'};
-    return $app->getmod( mod => $name );
 }
 sub get {
     my ( $inner, $name ) = @_;
@@ -390,13 +405,6 @@ sub get {
 sub getall {
     my $inner = shift;
     return $inner->{'parms'};
-}
-
-# This function fetches the global application conf
-sub getconf {
-    my ( $inner, $name ) = @_;
-    my $conf = $inner->{'virt'}{'obj'}{'_glob'}{'conf'};
-    return $conf;
 }
 sub set {
     my ( $inner, $name, $val ) = @_;
@@ -434,16 +442,6 @@ sub add {
        die "While checking $name - $err" if( $err );
     }
     $inner->{'parms'}{$name} = $val;
-}
-#use Data::Dumper;
-sub create {
-    my $inner = shift;
-    my $virt = $inner->{'virt'};
-    my $glob = $virt->{'obj'}{'_glob'};
-    #print Dumper( $virt );
-    my $ref = $glob->{'create'}; # glob are globals for the application
-    return if( !$ref );
-    &$ref( $virt, $glob, @_ );
 }
 
 package Class::Core;
@@ -518,7 +516,7 @@ sub create_object {
         if( $spectext eq 'file' ) {
             my $file = $class;
             $file =~ s|::|/|g;
-            ( $ob, $xml ) = new XML::Bare( file => $file );
+            ( $ob, $xml ) = new XML::Bare( file => "$file.pm.xml" );
         }
         else {
             ( $ob, $xml ) = new XML::Bare( text => $spectext );

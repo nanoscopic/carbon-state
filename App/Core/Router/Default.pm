@@ -28,7 +28,7 @@ package App::Core::Router::Default;
 use strict;
 use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
-use XML::Bare qw/xval/;
+use XML::Bare qw/xval forcearray/;
 use vars qw/$VERSION/;
 $VERSION = "0.02";
 
@@ -37,8 +37,21 @@ sub init {
     $self_src->{'path_routes'} = {};
     my $base = $self_src->{'base'} = xval( $core->getconf()->{'base'} );
     my $app = $core->getapp();
+    my $xml = $self_src->{'_xml'};
+    # <session name='CORE' perms='core_perm_man' />
+    my $sessions = forcearray( $xml->{'session'} );
+    my $sesshash = $self_src->{'sesshash'} = {};
+    $Data::Dumper::Maxdepth = 2;
+    $core->dumperx( "self_src", $self_src->{'_xml'} );
+    for my $session ( @$sessions ) {
+        my $name = xval $session->{'name'};
+        my $perm_mod_name =  xval $session->{'perms'};
+        my $perm_mod = $core->getmod( $perm_mod_name );
+        $sesshash->{ $name } = $perm_mod;
+    }
+    
     my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
-    $self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
+    #$self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
     $log->note( text => "Routing with web base of: $base" );
 }
 
@@ -51,7 +64,8 @@ sub route {
     my $post  = $r->{'post'};
     my $app   = $self->{'obj'}{'_app'}; # perhaps $core->getapp() would be better here
     my $rs    = $self->{'src'}{'path_routes'};
-    my $perm  = $self->{'src'}{'perm'};
+    
+    #my $perm  = $self->{'src'}{'perm'};
     
     my $base = $self->{'src'}{'base'};
     if( $base ne '' && $path =~ m|^/$base/(.+)| ) {
@@ -79,6 +93,13 @@ sub route {
             my $obj          = $r->getmod( mod => $objname );
             my $func         = $info->{'func'};
             my $session_name = $info->{'session'} || 'DEFAULT';
+            my $perm = $self->{'src'}{'sesshash'}{ $session_name };
+            #if( !$perm ) {
+            #    use Data::Dumper;
+            #    $Data::Dumper::Maxdepth = 2;
+            #    print Dumper( $self->{'src'} );
+            #}
+            
             my $bounce       = $info->{'bounce'};
             my $extra        = $info->{'extra'} || {};
             
@@ -128,7 +149,7 @@ sub route_path {
     # session - the cookie name that contains a valid session key
     # bounce  - whether or not to bounce if there is no key, and where to bounce to
     # extra   - other information to pass along
-    my ( $path, $obj, $func, $session, $bounce, $extra ) = $core->getarr( qw/path obj func session bounce extra/ );
+    my ( $path, $obj, $func, $session, $bounce, $extra, $file ) = $core->getarr( qw/path obj func session bounce extra file/ );
     
     #print "Adding path to $path\n";
     $self_src->{'path_routes'}{ $path } = {
@@ -136,7 +157,7 @@ sub route_path {
         func => $func, 
         session => $session, 
         bounce => $bounce,
-        folder => 1,
+        folder => $file ? 0 : 1,
         extra => $extra
     };
 }

@@ -75,7 +75,7 @@ sub register_via_spec {
     my $mod = $core->get('mod');
     
     # way to call: register( mod => $self )
-    # way to call: register( mod => $self, session  => 'ADMIN', func_list => ['test'] )
+    # way to call: register( mod => $self, session  => 'CORE', func_list => ['test'] )
     
     my $session = $core->get('session') || $self->{ 'sess_name' }; 
     my $log = $core->getmod('log');
@@ -89,7 +89,9 @@ sub register_via_spec {
     if( !$specx ) {
         confess( "No spec set" );
     }
-    $core->dumper("specx",App::Core::simplify($specx));
+    
+    #$core->dumper("specx",App::Core::simplify($specx));
+    
     my $spec = $mod->{'obj'}{'_spec'};
     
     # pull from specx: group='base', session='APP' 

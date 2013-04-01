@@ -35,6 +35,7 @@ use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
 #use URI::Encode;
 use URI::Escape qw/uri_escape uri_unescape/;
+use Carp;
 
 use vars qw/$VERSION/;
 $VERSION = "0.02";
@@ -55,14 +56,24 @@ sub parse {
     $self->{'byname'} ||= {};
     my $byname = $self->{'byname'};
     for my $rawcookie ( @rawcookies ) {
-        $rawcookie =~ m/^([A-Z_]+)=(.+)/;
-        my $name = $1;
-        my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
-        #print "Decoded cookie:\n";
-        #print Dumper( $cookie );
-        #print "Found cookie named $name\n";
-        $byname->{ $name } = $cookie;
-        push( @cookies, $cookie );
+        if( $rawcookie =~ m/^([A-Z_]+)=(.+)/ ) {
+            my $name = $1;
+            my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
+            #print "Decoded cookie:\n";
+            #print Dumper( $cookie );
+            print "Found cookie named $name\n";
+            $byname->{ $name } = $cookie;
+            push( @cookies, $cookie );
+        }
+        elsif( $rawcookie =~ m/^([A-Z_]+)=/ ) {
+            my $name = $1;
+            my $cookie = { name => $name, content => {} };
+            #$byname->{ $name } = $cookie;
+            #push( @cookies, $cookie );
+        }
+        else {
+            die "cookie is not of form: ([A-Z_]+)=(.+)\nIs: $rawcookie";
+        }
     }
     #return \@cookies;
     #print Dumper( \@cookies );
@@ -102,6 +113,7 @@ sub decode {
     #my ( $core, $self ) = @_;
     #my $raw = $core->get('raw');
     my $raw = shift;
+    if( !$raw ) { confess( 'raw not set' ); }
     my $hash = {};
     while( $raw =~ m'([a-z_]+)=(.+[^\\])(\&|$)'g ) {
         my $key = $1;
@@ -158,7 +170,8 @@ sub flatten {
 
 sub toraw {
     my $info = shift;
-    my $rawcontent = uri_escape( flatten( $info->{'content'} ) );
+    #print Dumper( $info );
+    my $rawcontent = uri_escape( flatten( $info ) );
     my $path = $info->{'path'};
     my $expires = $info->{'expires'};
     if( !$expires ) {

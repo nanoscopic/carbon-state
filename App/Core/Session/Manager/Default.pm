@@ -64,6 +64,7 @@ sub get_session {
     my $active_cookie = $cookieman->get( name => $cookie );
     if( $active_cookie ) {
         my $content = $active_cookie->{'content'};
+        #print Dumper( $active_cookie );
         print "Found cookie with name $cookie:\n  ";
         #my $chash = $cookieman->decode( raw => $content );
         #print Dumper( $content );

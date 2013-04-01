@@ -25,17 +25,42 @@ App::Core - Application framework built around Class::Core wrapper system
 =cut
 
 use lib '..';
-#use App::Core::Router::Default;
-#use App::Core::Log::Default;
-#use App::Core::Session::Manager::Default;
-#use App::Core::Cookie::Manager::Default;
-#use App::Core::Request::Manager::Default;
-#use App::Core::Admin::Default;
 
+package App::Core::ClassCoreExtend;
+# The subroutines in this package extend the typical Class::Core::INNER ( aka $core )
+use Data::Dumper;
+
+sub getmod {
+    my ( $a, $virt, $name ) = @_;
+    my $app = $virt->{'obj'}{'_app'};
+    return $app->getmod( mod => $name );
+}
+# This function fetches the global application conf
+sub getconf {
+    my ( $a, $virt, $name ) = @_;
+    my $conf = $virt->{'obj'}{'_glob'}{'conf'};
+    return $conf;
+}
+sub create {
+    my ( $a, $virt ) = shift;
+    my $glob = $virt->{'obj'}{'_glob'};
+    my $ref = $glob->{'create'}; # glob are globals for the application
+    return if( !$ref );
+    &$ref( $virt, $glob, @_ );
+}
+
+sub getapp  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
+sub getbase { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}->getbase(); }
+sub getmode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
+
+sub dumperx {
+    my ( $a, $virt, $name, $val ) = @_;
+    my ($package, $filename, $line) = caller;
+    print "Dump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
+}
 
 package App::Core;
 use Class::Core qw/:all/;
-use Data::Dumper;
 use XML::Bare qw/xval forcearray/;
 use strict;
 use vars qw/$VERSION/;
@@ -49,8 +74,6 @@ $spec = <<DONE;
     <ret type='bool'/>
 </func>
 DONE
-
-#my %modhash;
 
 my @apps;
 
@@ -73,7 +96,6 @@ sub INT_handler {
 
 sub run {
     my ( $core, $app ) = @_;
-    #print Dumper( $core );
     
     my $thr = threads->self();
     $runthread = $thr->tid();
@@ -94,7 +116,7 @@ sub run {
     for my $mode  ( @$modes  ) { my $name = xval $mode ->{'name'}; $modehash { $name } = $mode;  }
     for my $cmode ( @$cmodes ) { my $name = xval $cmode->{'name'}; $cmodehash{ $name } = $cmode; }
     
-    my $selected_mode = $core->get('mode') || 'default';
+    my $selected_mode = $app->{'_mode'} = $core->get('mode') || 'default';
     if( $selected_mode ne 'default' ) {
         print "Starting system in mode '$selected_mode'\n";
     }
@@ -120,8 +142,6 @@ sub run {
     my $mode_modules = forcearray( $cur_mode->{'module'} );
     push( @$modules, @$mode_modules );
     
-    #print Dumper( $modules );
-        
     my $log = 0;
         
     $glob->{'create'} = \&create_test;
@@ -136,7 +156,6 @@ sub run {
     for my $imod ( @$imodules ) {
         my $name = xval $imod->{'name'};
         $maxmod++;
-        #print "Internal module $name #$maxmod\n";
         
         $mod_by_order{ $maxmod } = { xml => $imod, type => 'internal' };
         $order_by_name{ $name } = $maxmod;
@@ -144,25 +163,21 @@ sub run {
     
     for my $emod ( @$modules ) {
         my $name = xval $emod->{'name'};
-        #print "External module $name\n";
         my $order = $order_by_name{ $name };
         if( $order ) { 
             if( $emod->{'file'} ) { # over-riding an internal module
-                #print "  Overwriting internal module #$order\n";
                 $mod_by_order{ $order } = { xml => $emod, type => 'custom' };
             }
             else {
-                #print "  Custom config for module\n";
                 my $imod = $mod_by_order{ $order };
                 my $a = $imod->{'xml'};
                 my $b = $emod;
                 if( $a && $b ) {
-                    %$a = ( %$a, %$b ); # shove in new configuration
+                    mux( $a, $b );
                 }
                 else {
                     $imod->{'xml'} = $a || $b;
                 }
-                #print Dumper( $a );
             }
         }
         else {
@@ -177,20 +192,25 @@ sub run {
         my $base     = $mod_by_order{ $k };
         my $modxml   = $base->{'xml'};
         my $type     = $base->{'type'};
-        my $mod_name = xval( $modxml->{'name'} ); #print "modname: $mod_name\n";
+        my $mod_name = xval( $modxml->{'name'} );
         my $file     = xval( $modxml->{'file'}, $mod_name );
         my $call     = $modxml->{'call'};
         my $listen   = $modxml->{'listen'};
-        #print "modname: $mod_name, file: $file\n";
-        my $mod_info = { file => $file, name => $mod_name, call => $call, listen => $listen, xml => $modxml, type => $type };
+        
+        my $mod_info = { 
+            file   => $file, 
+            name   => $mod_name, 
+            call   => $call, 
+            listen => $listen, 
+            xml    => $modxml, 
+            type   => $type
+        };
         
         if( $modxml->{'listen'} ) {
             push( @listening, $mod_info );
         }
         
-        #print "1";
         my $res = load_module( $glob, $mod_info, $app );
-        #print "2";
         if( !$res ) {
             if( $log ) {
                 $log->error( text => "Cannot load Module $mod_name - type: $type\n $@\n" ) 
@@ -200,7 +220,6 @@ sub run {
             }
             next;
         }
-        #print "3";
         $mod = $mod_info->{'ob'};
         $mod->{'r'} = $r; $mod->{'session'} = $session;
         
@@ -211,7 +230,6 @@ sub run {
         if( $mod_name eq 'log' ) { 
             $log = $glob->{'log'} = $mod;
         }
-        #print "mod: $mod\n";
         $modhash->{ $mod_name } = $mod;
         if( $log ) { 
             $log->note( text => "Loaded $type $mod_name module" );
@@ -240,8 +258,6 @@ sub run {
     }
     
     if( $cur_mode ) {
-        #my $modename = xval $cur_mode->{'name'};
-        #$log->note( text => "Running mode named '$modename'" );
         $app->runmode( mode => $cur_mode );
     }
     
@@ -270,12 +286,10 @@ sub create_test {
     my $r = $virt->{'r'};
     my $session = $virt->{'session'};
     return $mod->new( obj => { _glob => $glob }, r => $r, session => $session, @_ );
-    #print "$r $session $parm\n";
 }
 
 sub getmod {
     my ( $core, $app ) = @_;
-    #my $glob = $app->{'_glob'};
     
     my $modname = $core->get('mod');
     return $app->{'modhash'}{ $modname } || confess( "Cannot find mod $modname\n" );
@@ -286,29 +300,24 @@ sub runmode {
     my $mode = $core->get('mode');
     my $init = $mode->{'init'};
     my $calls = forcearray( $init->{'call'} );
-    #my $glob = $app->{'_glob'};
     my $mods = $app->{'modhash'};
     
     my %datahash;
     for my $call ( @$calls ) {
         my $modname = xval $call->{'mod'};
         my $func = xval $call->{'func'};
-        #print "Running $func on $mod\n";
         my $args = $call->{'args'};
         my $arghash = $args ? simplify( $args ) : 0; # strip value references out of xml
         fill_dollars( $arghash, \%datahash );
         
         my $mod = $mods->{ $modname } or confess( "Cannot get module $modname" );
-        #my $funcref = 
         if( $args ) { 
-            #print Dumper( $arghash );
             my $res = $mod->$func( %$arghash );
             $datahash{'ret'} = $res;
             if( ref( $res ) eq 'Class::Core::INNER' ) {
                 my $allres = $res->getallres();
                 mux( \%datahash, $allres );
             }
-            #print Dumper( \%datahash );
         }
         else { $mod->$func(); }
     }
@@ -317,7 +326,21 @@ sub runmode {
 sub mux {
     my ( $a, $b ) = @_;
     for my $key ( keys %$b ) {
-        $a->{ $key } = $b->{ $key };
+        my $src = $a->{ $key };
+        my $new = $b->{ $key };
+        if( $src && $new ) {
+            if( ref( $src ) eq 'ARRAY' ) {
+                if( ref( $new ) eq 'ARRAY' ) {
+                    push( @$src, @$new );
+                }
+                else {
+                    push( @$src, $new );
+                }
+            }
+        }
+        else {
+            $a->{ $key } = $b->{ $key };
+        }
     }
 }
 
@@ -327,7 +350,6 @@ sub fill_dollars {
     for my $key ( keys %$hash ) {
         my $val = $hash->{ $key };
         my $ref = ref( $val );
-        #print "ref:$ref - $val\n";
         if( $ref eq '' && $val =~ m/^\$(.+)$/ ) {
             my $name = $1;
             if( $name =~ m/^arg([0-9]+)$/ ) {
@@ -343,7 +365,6 @@ sub fill_dollars {
             fill_dollars( $val );
         }
     }
-    #print Dumper( $hash );
 }
 
 sub simplify {
@@ -376,7 +397,6 @@ my %used_mods;
 
 sub load_module {
     my ( $glob, $info, $app ) = @_;
-    #print Dumper( $core );
     my $file = $info->{'file'};
     if( !$used_mods{ $file } ) {
         eval("use $file;");
@@ -388,8 +408,18 @@ sub load_module {
     my $newref = \&{"$file\::new"};
     my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
     my $call = $info->{'call'};
-    #my $listen = $info->{'listen'};
-    $info->{'ob'} = $newref->( $file, obj => { _callback => $callback, _glob => $glob, _app => $app }, _call => $call, _callfunc => \&callfunc, _xml => $info->{'xml'} );
+    $info->{'ob'} = $newref->( 
+        $file, 
+        obj => { 
+            _callback => $callback, 
+            _glob     => $glob, 
+            _app      => $app 
+        }, 
+        _call     => $call, 
+        _callfunc => \&callfunc, 
+        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _xml      => $info->{'xml'}
+        );
     return 1;
 }
 
@@ -398,21 +428,17 @@ sub callfunc {
     my ( $app, $call, $func, $xml )= @_;
     my $mod = xval $call->{'mod'};
     my $port = xval $call->{'port'};
-    #$xml .= "<mod>$mod</mod><func>$func</func>";
     my $rpc = $app->{'modhash'}{'rpc'};
     $rpc->call( xml => $xml, mod => $mod, func => $func );
-    #print "xml2:$xml\n";
 }
 
 sub check {
     my ( $core, $virt, $func, $parms ) = @_;
     my $obj = $virt->{'obj'};
     my $cls = $obj->{'_class'};
-    #print Dumper( $core );
     my $glob = $obj->{'_glob'};
     $glob->{'log'}->note( text => "Function call - $cls\::$func" );
     my $spec = $core->{'_funcspec'};
-    #print Dumper( $spec ) if( $spec );
     if( $spec->{'perms'} && $virt->{'r'} ) {
         my $user_perms = $virt->{'r'}{'perms'};
         my $func_perms = $spec->{'perms'};

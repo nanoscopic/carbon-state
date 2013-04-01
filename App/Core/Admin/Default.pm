@@ -47,12 +47,14 @@ sub init {
     my ( $core, $self ) = @_; # this self is src
     my $conf = $self->{'conf'} = $core->get('conf');
     my $router = $core->getmod( 'web_router' );
-    $router->route_path( path => "login", obj => 'core_admin', func => 'login', session => 'ADMIN' );
-    $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'ADMIN', bounce => 'login' );
+    $router->route_path( path => "login", obj => 'core_admin', func => 'login', session => 'CORE' );
+    $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'login' );
     $self->{'base'} = xval( $core->getconf()->{'base'} );
     
     my $api = $core->getmod( 'core_api' );
-    $api->register_via_spec( mod => $self, session => 'ADMIN' );
+    $api->register_via_spec( mod => $self, session => 'CORE' );
+    #print "****" . ref( $core ) . "*****\n";
+    #core->blah();
 }
 
 sub admin {
@@ -88,7 +90,7 @@ sub login {
         my $user = $postvars->{'user'};
         my $pw = $postvars->{'pw'};
         $r->out( text => "Login attempt by $user<br>" );
-        my $perm_man = $r->getmod( mod => 'perm_man' );
+        my $perm_man = $r->getmod( mod => 'core_perm_man' );
         
         my $res = $perm_man->user_check_pw( user => $user, pw => $pw );
         if( $res->getres('ok') ) {
@@ -102,7 +104,7 @@ sub login {
             $r->set_permissions( perms => $perm_man->user_get_permissions( user => $user ) );
             my $sid = $session->getid();
             
-            my $cookie = $cookieman->create( name => 'ADMIN', content => { session_id => $sid }, path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
+            my $cookie = $cookieman->create( name => 'CORE', content => { session_id => $sid }, path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
             $cookieman->clear();
             #print Dumper( $cookie );
             $cookieman->add( cookie => $cookie );

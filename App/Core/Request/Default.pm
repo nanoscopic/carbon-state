@@ -65,8 +65,8 @@ sub end {
     my $mods = $r->{'mods'};
     for my $modname ( keys %$mods ) {
         my $mod = $mods->{ $modname };
-        if( $mod->_hasfunc('end_session') ) {
-            $mod->end_session();
+        if( $mod->_hasfunc('end_request') ) {
+            $mod->end_request();
         }
     }
     undef $r->{'mods'};
