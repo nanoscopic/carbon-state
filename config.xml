@@ -6,9 +6,10 @@
     </log>
     
     <mode name='test'>
-        <!--<module name='core_api'    file='App::Core::API::Default' />
-        <module name='perm_flat'   file='App::Core::Permission::Method::Flatfile'  store='flat_perms.xml'/>
+        <!--<module name='core_api'    file='App::Core::API::Default' />-->
+        <!--<module name='perm_flat'   file='App::Core::Permission::Method::Flatfile'  store='flat_perms.xml'/>
         <module name='perm_man'    file='App::Core::Permission::Manager::Default' method='perm_flat' />-->
+        
         <module name='permtest' file='Module::permtest' />
         
         <!--<module name='cookie_man'  file='App::Core::Cookie::Manager::Default'  />
@@ -18,7 +19,7 @@
             <script>virtual_requests.xml</script>
         </module>
         <module name='web_router'>
-            
+            <routes file='routes.xml'/>
         </module>
         <module name='core_admin'  file='App::Core::Admin::Default'            />
         <module name='str_table'   file='App::Core::StringTable::XML'         store='str_table.xml' />
@@ -29,7 +30,29 @@
                     <test>$arg1</test>
                 </args>
             </call>-->
+            <call mod='web_router' func='read_routes'/>
             <call mod=web_request func=run />
+        </init>
+    </mode>
+    
+    <mode name='a'>
+        <module name='web_router' file='App::Core::Router::Default'>
+            <routes file='routes_a.xml'/>
+        </module>
+        
+        <module name='cookie_man'  file='App::Core::Cookie::Manager::Default'  />
+        <module name='request_man' file='App::Core::Request::Manager::Default' />
+        <module name='session_man' file='App::Core::Session::Manager::Default' />
+        <module name='web_request' file='App::Core::Request::IO::Virtual'>
+            <script>virtual_requests_a.xml</script>
+        </module> <!-- depends on session_man, request_man -->
+        
+        <class name='b' file='MTest::b'/>
+        <module name='a' file='MTest::a'/>
+        
+        <init>
+            <call mod='web_router' func='read_routes'/>
+            <call mod='web_request' func='run' />
         </init>
     </mode>
     

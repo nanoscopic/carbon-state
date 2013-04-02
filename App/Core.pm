@@ -32,6 +32,7 @@ use Data::Dumper;
 
 sub getmod {
     my ( $a, $virt, $name ) = @_;
+    #return $virt->{'r'}->getmod( mod => $name ) if( $virt->{'r'} );
     my $app = $virt->{'obj'}{'_app'};
     return $app->getmod( mod => $name );
 }
@@ -42,11 +43,14 @@ sub getconf {
     return $conf;
 }
 sub create {
-    my ( $a, $virt ) = shift;
-    my $glob = $virt->{'obj'}{'_glob'};
-    my $ref = $glob->{'create'}; # glob are globals for the application
-    return if( !$ref );
-    &$ref( $virt, $glob, @_ );
+    my $a = shift;
+    my $virt = shift;
+    my $mod = shift;
+    my $app = $virt->{'obj'}{'_app'};
+    my $r = $virt->{'r'};
+    my $session = $virt->{'session'};
+    my %more = @_;
+    return $app->load_class( mod => $mod, r => $r, session => $session, parms => \%more );
 }
 
 sub getapp  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
@@ -55,8 +59,8 @@ sub getmode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
 
 sub dumperx {
     my ( $a, $virt, $name, $val ) = @_;
-    my ($package, $filename, $line) = caller;
-    print "Dump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
+    my ($package, $filename, $line) = caller(1);
+    print "XDump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
 }
 
 package App::Core;
@@ -126,6 +130,24 @@ sub run {
     if( $cmodehash{$selected_mode} ) { $cur_cmode = $cmodehash{$selected_mode}; }
     
     my $glob = $app->{'obj'}{'_glob'};
+    
+    my $classhash = $glob->{'classinfo'} = {};
+    my $classes = forcearray( $xml->{'class'} );
+    if( @$classes ) {
+        for my $class ( @$classes ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class };
+        }
+    }
+    my $mclasses = forcearray( $cur_mode->{'class'} );
+    if( @$mclasses ) {
+        for my $class ( @$mclasses ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class };
+        }
+    }
     
     $glob->{'conf'} = $xml;
     my $r = $app->{'r'} = 'init';
@@ -279,15 +301,6 @@ sub end {
     }
 }
 
-sub create_test {
-    my $virt = shift;
-    my $glob = shift;
-    my $mod = shift;
-    my $r = $virt->{'r'};
-    my $session = $virt->{'session'};
-    return $mod->new( obj => { _glob => $glob }, r => $r, session => $session, @_ );
-}
-
 sub getmod {
     my ( $core, $app ) = @_;
     
@@ -321,6 +334,32 @@ sub runmode {
         }
         else { $mod->$func(); }
     }
+}
+
+sub muxdup {
+    my ( $a, $b ) = @_;
+    my $n = {};
+    for my $key ( keys %$a ) {
+        $n->{ $key } = $a->{ $key };
+    }
+    for my $key ( keys %$b ) {
+        my $src = $n->{ $key };
+        my $new = $b->{ $key };
+        if( $src && $new ) {
+            if( ref( $src ) eq 'ARRAY' ) {
+                if( ref( $new ) eq 'ARRAY' ) {
+                    push( @$src, @$new );
+                }
+                else {
+                    push( @$src, $new );
+                }
+            }
+        }
+        else {
+            $n->{ $key } = $b->{ $key };
+        }
+    }
+    return $n;
 }
 
 sub mux {
@@ -423,9 +462,47 @@ sub load_module {
     return 1;
 }
 
+sub load_class {
+    my ( $core, $app ) = @_;
+    my $glob = $app->{'obj'}{'_glob'};
+    my $mod = $core->get('mod');
+    my $r = $core->get('r');
+    my $session = $core->get('session');
+    my $parms = $core->get('parms') || {};
+    
+    my $classinfo = $glob->{'classinfo'};
+    my $info = $classinfo->{ $mod } or confess( "Cannot find class $mod" );
+    my $file = $info->{'file'};
+    
+    if( !$used_mods{ $file } ) {
+        eval("use $file;");
+        if( $@ ) { # was $! before
+            return 0;
+        }
+    }
+    $used_mods{ $file } = 1;
+    my $newref = \&{"$file\::new"};
+    my $callback = \&check; # Always do logging of class calls
+    return $newref->( 
+        $file, 
+        obj => { 
+            _callback => $callback, 
+            _glob     => $glob, 
+            _app      => $app 
+        },
+        r => $r,
+        session => $session,
+        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _xml      => $info->{'xml'},
+        %$parms
+        );
+    
+    #return $mod->new( obj => { _glob => $glob }, r => $r, session => $session, @_ );
+}
+
 # This function needs to make a remote call
 sub callfunc {
-    my ( $app, $call, $func, $xml )= @_;
+    my ( $app, $call, $func, $xml ) = @_;
     my $mod = xval $call->{'mod'};
     my $port = xval $call->{'port'};
     my $rpc = $app->{'modhash'}{'rpc'};

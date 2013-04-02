@@ -83,7 +83,9 @@ sub getmod {
 
 sub content_type_as_header {
     my ( $core, $r ) = @_;
-    return "Content-Type: text/html; charset=ISO-8859-1\r\n";
+    my $type = $r->{'content_type'} || 'text/html';
+    my $charset = $r->{'charset'} || 'ISO-8859-1';
+    return "Content-Type: $type; charset=$charset\r\n";
 }
 
 sub get_headers {

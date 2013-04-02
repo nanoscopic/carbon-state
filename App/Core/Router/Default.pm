@@ -39,10 +39,21 @@ sub init {
     my $app = $core->getapp();
     my $xml = $self_src->{'_xml'};
     # <session name='CORE' perms='core_perm_man' />
+    #$Data::Dumper::Maxdepth = 2;
+    #$core->dumperx( "self_src", $self_src->{'_xml'} );
+    
+    my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
+    #$self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
+    $log->note( text => "Routing with web base of: $base" );
+}
+
+sub read_routes {
+    my ( $core, $self_src ) = @_;
+    my $xml = $self_src->{'_xml'};
+    my $log = $core->getmod('log');
+    
     my $sessions = forcearray( $xml->{'session'} );
     my $sesshash = $self_src->{'sesshash'} = {};
-    $Data::Dumper::Maxdepth = 2;
-    $core->dumperx( "self_src", $self_src->{'_xml'} );
     for my $session ( @$sessions ) {
         my $name = xval $session->{'name'};
         my $perm_mod_name =  xval $session->{'perms'};
@@ -50,9 +61,24 @@ sub init {
         $sesshash->{ $name } = $perm_mod;
     }
     
-    my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
-    #$self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
-    $log->note( text => "Routing with web base of: $base" );
+    if( $xml->{'routes'} ) {
+        #$core->dumperx('routes', $xml->{'routes'} );
+        my $route_sets = forcearray( $xml->{'routes'} );
+        for my $routes ( @$route_sets ) {
+            my $ob;
+            my $rs;
+            if( $routes->{'file'} ) {
+                my $fname = xval( $routes->{'file'} );
+                ( $ob, $rs ) = XML::Bare->new( file => $fname );
+                #$core->dumperx('rs', $rs );
+                $rs = $rs->{'xml'};
+            }
+            else {
+                $rs = $routes;
+            }
+            $self_src->proc_xml( xml => $rs );
+        }
+    }
 }
 
 sub route {
@@ -94,11 +120,12 @@ sub route {
             my $func         = $info->{'func'};
             my $session_name = $info->{'session'} || 'DEFAULT';
             my $perm = $self->{'src'}{'sesshash'}{ $session_name };
-            #if( !$perm ) {
-            #    use Data::Dumper;
-            #    $Data::Dumper::Maxdepth = 2;
-            #    print Dumper( $self->{'src'} );
-            #}
+            if( !$perm ) {
+                use Data::Dumper;
+                $Data::Dumper::Maxdepth = 2;
+                print Dumper( $self->{'src'} );
+                die "No map from session $session_name to perm module";
+            }
             
             my $bounce       = $info->{'bounce'};
             my $extra        = $info->{'extra'} || {};
@@ -138,6 +165,68 @@ sub route {
         $out .= "Post: $post<br>";
         $r->out( text => $out );
     }
+}
+
+# process xml
+sub proc_xml {
+    my ( $core, $self_src ) = @_;
+    my $xml = $core->get('xml');
+    #$core->dumperx( 'xml', $xml );
+    my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
+    my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
+    my $conf = $xml;
+    #$core->dumper( 'routes', $routes );
+    #$core->dumperx( 'conf', $conf );
+    if( @$groups ) {
+        for my $group ( @$groups ) {
+            handle_group( $core, $self_src, $conf, $group );
+        }
+    }
+    if( @$routes ) {
+        for my $route ( @$routes ) {
+            #$core->dumper( 'route', $route );
+            handle_route( $core, $self_src, $conf, $route );
+        }
+    }
+}
+
+sub handle_group {
+    my ( $core, $self_src, $conf, $xml ) = @_;
+    my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
+    my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
+    my $new_conf = $xml;
+    my $mux = App::Core::muxdup( $conf, $new_conf );
+    if( @$groups ) {
+        for my $group ( @$groups ) {
+            handle_group( $core, $self_src, $mux, $group );
+        } 
+    }
+    if( @$routes ) {
+        for my $route ( @$routes ) {
+            handle_route( $core, $self_src, $mux, $route );
+        }
+    }
+}
+
+sub handle_route {
+    my ( $core, $self_src, $conf, $route ) = @_;
+    #$core->dumperx( 'conf', $conf );
+    my $mux = App::Core::muxdup( $conf, $route );
+    #$core->dumperx( 'conf muxed with route', $conf );
+    # in theory the conf here should be a mux of all the parent confs
+    #my $obj     = xval $conf->{'obj'};
+    #my $func    = xval $conf->{'func'};
+    #my $session = xval $conf->{'session'};
+    #my $bounce  = xval $conf->{'bounce'};
+    #my $folder  = xval $conf->{'folder'};
+    #my $extra   = xval $conf->{'extra'};
+    #if( $extra ) { $extra = App::Core::simplify( $extra ); }
+       
+    my $info = App::Core::simplify( $mux );
+    
+    $core->dumper( 'info', $info );
+    #$self_src->route_path( %$info );
+       
 }
 
 # Note that this should only be called from init functions

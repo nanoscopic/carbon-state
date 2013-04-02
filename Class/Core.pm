@@ -568,7 +568,7 @@ sub new {
     my %hashin = ( @_ );
     
     my $objin = $hashin{'obj'} || {};
-    my $glob = ( $objin->{'_glob'} ||= { objs => {}, create => 0 } );
+    my $glob = ( $objin->{'_glob'} ||= { objs => {} } );
     my $objs = $glob->{'objs'};  
     
     my $obj;
