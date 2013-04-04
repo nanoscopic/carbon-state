@@ -1,0 +1,31 @@
+<xml>
+    <module name='log'         file='App::Core::Log::Default'  console=1            />
+    
+    <mode name='default'>
+        <module name='core_perm_flat'   file='App::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='core_perm_man'    file='App::Core::Permission::Manager::Default' method='core_perm_flat' />
+        <module name='session_man' file='App::Core::Session::Manager::Default' />
+        <module name='cookie_man'  file='App::Core::Cookie::Manager::Default'  />
+        <module name='request_man' file='App::Core::Request::Manager::Default' />
+        <module name='web_request' file='App::Core::Request::IO::Mongrel2' threads=3    />
+        <module name='web_router'  file='App::Core::Router::Default' >
+            <multi_session/>
+            <session name='CORE' perms='core_perm_man' />
+        </module>
+    </mode>
+    
+    <mode name='virt'>
+        <module name='core_api'         file='App::Core::API::Default'>
+            <group name='core' session='CORE' mux/>
+        </module>
+        <module name='core_perm_flat'   file='App::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='core_perm_man'    file='App::Core::Permission::Manager::Default' method='core_perm_flat' />
+        <module name='session_man' file='App::Core::Session::Manager::Default' />
+        <module name='cookie_man'  file='App::Core::Cookie::Manager::Default'  />
+        <module name='request_man' file='App::Core::Request::Manager::Default' />
+        <module name='web_router'  file='App::Core::Router::Default' >
+            <multi_session/>
+            <session name='CORE' perms='core_perm_man' />
+        </module>
+    </mode>
+</xml>

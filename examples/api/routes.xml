@@ -1,0 +1,8 @@
+<xml>
+    <file>1</file>
+    <session>APP</session>
+    <obj>apitest</obj>
+    <group>
+        <route path='home' func='home'><tpl name='apitest'/></route>
+    </group>
+</xml>

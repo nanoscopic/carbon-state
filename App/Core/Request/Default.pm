@@ -43,7 +43,7 @@ sub init {
     my %rmods;
     for my $modname ( keys %$modhash ) {
         my $mod = $modhash->{ $modname };
-        my $dup = $mod->_duplicate( r => $r );
+        my $dup = $mod->_duplicate( r => $r, _extend => $mod->{'_extend'} );
         if( $dup->_hasfunc('init_request') ) {
             $dup->init_request();
         }

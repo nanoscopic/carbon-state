@@ -110,6 +110,7 @@ sub route {
     my $resolved = 0;
     my $full = 1;
     my @parts = split('/',$path );
+    my $tpl = 0;
     while( @parts ) {
         my $joined = join('/', @parts );
         print "Testing $joined\n";
@@ -147,7 +148,17 @@ sub route {
                 return;
             }
             
+            #$core->dumper( 'extra', $extra );
+            if( %$extra && $extra->{'tpls'} ) {
+                $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
+            }
             my $res = $obj->$func( %$extra );
+            if( $tpl ) {
+                my $text = $tpl->run();
+                if( $text ) {
+                    $r->out( text => $text );
+                }
+            }
             $resolved = 1;
             last;
         }
@@ -170,6 +181,17 @@ sub route {
 # process xml
 sub proc_xml {
     my ( $core, $self_src ) = @_;
+    
+    my $log = $core->getmod('log');
+    my $tpl_engine = $core->getmod( 'tpl_engine', 0 ); # 0 is to say this module is not required
+    if( $tpl_engine ) {
+        $self_src->{'tpl_engine'} = $tpl_engine;
+        $log->note( text => "Router will read in templates");
+    }
+    else {
+        $log->note( text => "Router will not read in templates");
+    }
+    
     my $xml = $core->get('xml');
     #$core->dumperx( 'xml', $xml );
     my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
@@ -224,9 +246,24 @@ sub handle_route {
        
     my $info = App::Core::simplify( $mux );
     
-    $core->dumper( 'info', $info );
-    #$self_src->route_path( %$info );
-       
+    my $tple = $self_src->{'tpl_engine'};
+    if( $tple && $mux->{'tpl'} ) {
+        my $tplxml = $mux->{'tpl'};
+        my $tpl;
+        
+        #$core->dumper( 'tplxml', $tplxml );
+        if( $tplxml->{'file'} ) {
+            $tpl = $tple->load_xml( xml => $tplxml );
+        }
+        else {
+            my $tplname = xval $tplxml->{'name'};
+            $tpl = $tple->get( name => $tplname );
+        }
+        $info->{'extra'} = { tpls => $tpl };
+    }
+    
+    #$core->dumper( 'info', $info );
+    $self_src->route_path( %$info );
 }
 
 # Note that this should only be called from init functions

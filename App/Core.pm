@@ -31,16 +31,23 @@ package App::Core::ClassCoreExtend;
 use Data::Dumper;
 
 sub getmod {
-    my ( $a, $virt, $name ) = @_;
+    my ( $a, $virt, $name, $req ) = @_;
     #return $virt->{'r'}->getmod( mod => $name ) if( $virt->{'r'} );
     my $app = $virt->{'obj'}{'_app'};
-    return $app->getmod( mod => $name );
+    return $app->getmod( mod => $name, req => $req );
 }
 # This function fetches the global application conf
 sub getconf {
     my ( $a, $virt, $name ) = @_;
     my $conf = $virt->{'obj'}{'_glob'}{'conf'};
     return $conf;
+}
+sub starttpl { 
+    my ( $a, $virt, $name ) = @_;
+    my $tple;
+    if( $virt->{'r'} ) { $tple = $virt->{'r'}->getmod( mod => 'tpl_engine' ); }
+    else               { $tple = $virt->{'obj'}{'_app'}->getmod( mod => 'tpl_engine' ); }
+    return $tple->start( name => $name );
 }
 sub create {
     my $a = shift;
@@ -57,10 +64,31 @@ sub getapp  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
 sub getbase { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}->getbase(); }
 sub getmode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
 
+
 sub dumperx {
     my ( $a, $virt, $name, $val ) = @_;
     my ($package, $filename, $line) = caller(1);
-    print "XDump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
+    my $data = "XDump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
+    print $data;
+    return $data;
+}
+sub dumper {
+    my ( $a, $inner, $name, $val ) = @_;
+    my ($package, $filename, $line) = caller(1);
+    my $data = "Dump from $package #$line\n  $name:\n  " . Dumper( $val );
+    print $data;
+    return $data;
+}
+
+sub requestify {
+    my ( $a, $virt, $ob, $r ) = @_;
+    $r ||= $virt->{'r'};
+    
+    my $dup = $ob->_duplicate( r => $r, _extend => $virt->{'_extend'} );
+    if( $dup->_hasfunc('init_request') ) {
+        $dup->init_request();
+    }
+    return $dup;
 }
 
 package App::Core;
@@ -305,7 +333,16 @@ sub getmod {
     my ( $core, $app ) = @_;
     
     my $modname = $core->get('mod');
-    return $app->{'modhash'}{ $modname } || confess( "Cannot find mod $modname\n" );
+    my $req = $core->get('req');
+    
+    my $mod = $app->{'modhash'}{ $modname };
+    return $mod if( $mod );
+    
+    if( defined( $req ) && $req == 0 ) {
+    }
+    else {
+        confess( "Cannot find mod $modname\n" );
+    }
 }
 
 sub runmode {
@@ -383,6 +420,19 @@ sub mux {
     }
 }
 
+sub slurp {
+    my $filename = shift;
+    my $contents;
+    open( SLURP_FILE, $filename );
+    binmode( SLURP_FILE ); # This line is only needed on Windows Perl, to prevent the file being read in text mode
+    {
+        local $/ = undef; # turns off the line seperator
+        $contents = <SLURP_FILE>;
+    }
+    close( SLURP_FILE );
+    return $contents;
+}
+
 sub fill_dollars {
     my ( $hash, $data ) = @_;
     return if( ref( $hash ) ne 'HASH' );
@@ -447,12 +497,14 @@ sub load_module {
     my $newref = \&{"$file\::new"};
     my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
     my $call = $info->{'call'};
+    my $name = $info->{'name'};
     $info->{'ob'} = $newref->( 
         $file, 
         obj => { 
             _callback => $callback, 
             _glob     => $glob, 
-            _app      => $app 
+            _app      => $app,
+            _name     => $name
         }, 
         _call     => $call, 
         _callfunc => \&callfunc, 

@@ -30,6 +30,7 @@ use strict;
 use vars qw/$VERSION/;
 use XML::Bare qw/xval/;
 use Carp;
+use JSON qw/to_json/;
 $VERSION = "0.01";
 
 sub init {
@@ -112,6 +113,9 @@ sub register_via_spec {
     
     #$core->dumper( "Refs", $fref );
     #$core->dumper( "Funcs", $funcs );
+    
+    my $router = $core->getmod( 'web_router' );
+    
     for my $funcname ( @$fref ) {
         my $func = $funcs->{ $funcname };
         my $xml = $func->{'x'};
@@ -125,6 +129,8 @@ sub register_via_spec {
             my @vs = split(',', $v_str );
             my $apiname = xval $api->{'name'};
             my $cur_group;
+            my $gpname = xval $api->{'group'}, $basegroup;
+            
             if( $api->{'group'} ) {
                 $cur_group = $gphash->{ xval( $api->{'group'} ) };
             }
@@ -136,12 +142,46 @@ sub register_via_spec {
                 $cur_group->{ $v } ||= {};
                 my $apinames = $cur_group->{ $v };
                 my $modname = $mod->{'obj'}{'_class'};
-                $log->note( text => "API Register $session/$apiname -> $modname/$funcname" );
+                my $modshort = $mod->{'obj'}{'_name'};
+                my $path = "api/$gpname/$v/$apiname";
+                $log->note( text => "API Register $session - $path -> $modname/$funcname($modshort)" );
                 $apinames->{ $apiname } = { session => $session, mod => $mod, func => $funcname };
+                $router->route_path( path => $path, obj => 'core_api', func => 'handle_api_call', session => $session, file => 1, extra => { mod => $modshort, func => $funcname } );
+                # todo enable bouncing from api locations
             }
             # example function registration: <api v='1,2' name='apiname'/>
         }
     }
+}
+
+sub handle_api_call {
+    my ( $core, $self ) = @_;
+    my $r = $self->{'r'};
+    my $modname = $core->get('mod');
+    my $mod = $r->getmod( mod => $modname );
+    my $func = $core->get('func');
+    my $data = $mod->$func();
+    #$core->dumper( 'data', $data );
+    
+    my $url = $r->{'path'};
+    if( $url =~ m|/xml| ) {
+        $r->{'content_type'} = 'text/xml';
+        $r->out( text => "<xml>".Class::Core::_hash2xml( $data )."</xml>" );
+    }
+    elsif( $url =~ m|/dump| ) {
+        use Data::Dumper;
+        my $dump = Dumper( $data );
+        $dump = "<pre>$dump</pre>";
+        $r->out( text => $dump );
+    }
+    else {
+        $r->{'content_type'} = 'text/javascript';
+        #$JSON::Pretty = 1;
+        #$r->out( text => to_json( $data ) );
+        my $json = JSON->new->pretty;
+        $r->out( text => $json->encode( $data ) );
+    }
+    
 }
 
 sub register_function {

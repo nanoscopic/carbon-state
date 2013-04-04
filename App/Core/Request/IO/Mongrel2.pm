@@ -239,7 +239,6 @@ sub handle_request {
             
     #print "Data:$data\n";
     my $hash = decode_tnetstrings( $data );
-    #print Dumper( $hash );
     
     my $queryhash = 0;
     if( $hash && $hash->{'QUERY'} ) {
@@ -289,6 +288,11 @@ sub handle_request {
                 #push( @$postvars, $parthash );
             }
         }
+    }
+    elsif( $hash->{'METHOD'} eq 'POST' ) {
+        $type = 'post';
+        my $uri = new URI::Simple( "http://test.com/?$post" );
+        $postvars = $uri->{'query'};
     }
     
     my $session = 0;

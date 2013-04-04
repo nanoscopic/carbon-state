@@ -1,0 +1,8 @@
+<xml>
+    <file>1</file>
+    <session>APP</session>
+    <obj>calc</obj>
+    <group>
+        <route path='calc' func='home'><tpl name='calc'/></route>
+    </group>
+</xml>

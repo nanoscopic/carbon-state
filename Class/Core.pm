@@ -97,8 +97,9 @@ sub _duplicate {
 
 sub _hasfunc {
     my ( $ob, $tocall ) = @_;
-    my $spec = $ob->{'obj'}{'_spec'};
-    return $spec->{'funcs'}{ $tocall };
+    #my $spec = $ob->{'obj'}{'_spec'};
+    #return $spec->{'funcs'}{ $tocall };
+    return $ob->{'obj'}{'_map'}{ $tocall };
 }
 
 # The container that is wrapped around the object
@@ -140,8 +141,15 @@ sub AUTOLOAD {
         confess "No function $tocall in $cls\n";
     }
     my $spec = $obj->{'_spec'};
-    if( ( scalar @_ ) % 2 ) {
-        confess "Non even list - $cls->$tocall\n";
+    my $pcount = ( scalar @_ );
+    my $x = 0;
+    if( $pcount % 2 ) {
+        if( $pcount != 1 ) {
+            confess "Non even list - $cls->$tocall\n";
+        }
+        else {
+            $x = $_[0];
+        }
     }
     my %parms = @_;
     my $allerr = '';
@@ -200,7 +208,7 @@ sub AUTOLOAD {
         return 0;
     }
     
-    my $rval = $inner->{'ret'} = &$ref( $inner, $virt ); # call the function
+    my $rval = $inner->{'ret'} = &$ref( $inner, $virt, $x ); # call the function
     if( $spec ) {
         my $retspec = $spec->{'ret'};
         if( $retspec && %$retspec ) {
@@ -392,11 +400,6 @@ sub AUTOLOAD {
     }
 }
 sub DESTROY {
-}
-sub dumper {
-    my ( $inner, $name, $val ) = @_;
-    my ($package, $filename, $line) = caller;
-    print "Dump from $package #$line\n  $name:\n  " . Dumper( $val );
 }
 sub get {
     my ( $inner, $name ) = @_;

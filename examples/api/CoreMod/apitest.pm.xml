@@ -1,0 +1,4 @@
+<group>app</group>
+<func name='test'>
+    <api v='1' name='test'/>
+</func>

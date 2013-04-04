@@ -1,0 +1,37 @@
+<xml>
+    <base>perl</base>
+    <log>
+        <console/>
+        <win32color/>
+    </log>
+    
+    <tpl name='calc' file='calc.tpl' />
+    
+    <mode name='default'>
+        <module name='calc_perm_flat'   file='App::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='calc_perm_man'    file='App::Core::Permission::Manager::Default' method='calc_perm_flat' />
+    
+        <module name='calc' file='CoreMod::calc' />
+        
+        <module name='tpl_engine' file='App::Core::Template::Engine::TextTemplate'/>
+        
+        <module name='web_request'>
+            <ip>172.22.27.152</ip>
+        </module>
+        
+        <module name='web_router'>
+            <session name='APP' perms='calc_perm_man' />
+            <routes file='routes.xml'/>
+        </module>
+        
+        <init>
+            <call mod='web_router' func='read_routes'/>
+            <call mod='web_request' func='run' />
+            <call mod='web_request' func='wait_threads' />
+        </init>
+    </mode>
+    
+    <mode name='virt'>
+    
+    </mode>
+</xml>
