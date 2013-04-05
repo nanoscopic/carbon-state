@@ -44,7 +44,7 @@ $VERSION = "0.02";
 sub init {
     my ( $core, $self ) = @_;
     my $app = $self->{'obj'}{'_app'};
-    my $sman = $self->{'session_man'} = $app->getmod( mod => 'session_man' );
+    my $sman = $self->{'session_man'} = $app->get_mod( mod => 'session_man' );
     if( !$sman ) {
         confess( "Cannot find session manager" );
     }
@@ -57,9 +57,9 @@ sub end {
 sub run {
     my ( $core, $self ) = @_;
     
-    my $app = $core->getapp();
-    $self->{'request_man'} = $app->getmod( mod => 'request_man' );
-    my $log = $self->{'log'} = $app->getmod( mod => 'log' );
+    my $app = $core->get_app();
+    $self->{'request_man'} = $app->get_mod( mod => 'request_man' );
+    my $log = $self->{'log'} = $app->get_mod( mod => 'log' );
     my $conf = $self->{'_xml'};
     my $cookies = [];
     if( $conf->{'script'} ) {
@@ -79,11 +79,11 @@ sub run {
                 $get = App::Core::simplify( $req->{'get'} );
             }
             my $resp = $self->virtual_request( path => $path, post => $post, query => $get, cookies => $cookies );
-            $cookies = $resp->getres('cookies');
+            $cookies = $resp->get_res('cookies');
             #print Dumper( $cookies );
-            my $body = $resp->getres('body');
-            my $restype = $resp->getres('restype');
-            my $r = $resp->getres('r');
+            my $body = $resp->get_res('body');
+            my $restype = $resp->get_res('restype');
+            my $r = $resp->get_res('r');
             if( $restype eq 'redirect' ) {
                 my $url = $r->{'url'};
                 print "Redirect to $url\n";
@@ -155,13 +155,13 @@ sub virtual_request {
         type     => $type
         );
     
-    my $cookieman = $r->getmod( mod => 'cookie_man' );
+    my $cookieman = $r->get_mod( mod => 'cookie_man' );
     if( $hash->{'cookie'} ) {
         #print Dumper( $hash->{'cookie'} );
         $cookieman->parse( raw => $hash->{'cookie'} );
     }
     
-    my $router = $r->getmod( mod => 'web_router' );
+    my $router = $r->get_mod( mod => 'web_router' );
 
     my $res = $router->route( session_man => $sman );
     
@@ -179,7 +179,7 @@ sub virtual_request {
     my $body = $r->get_body();
     
     my $headers = $r->get_headers();
-    #$headers .= $cookieman->setheader();
+    #$headers .= $cookieman->set_header();
     #print Dumper( $cookieman->{'cookies'} );
     my $rawcookies = $cookieman->rawcookies();
     

@@ -405,7 +405,7 @@ sub get {
     my ( $inner, $name ) = @_;
     return $inner->{'parms'}{ $name }; 
 }
-sub getall {
+sub get_all {
     my $inner = shift;
     return $inner->{'parms'};
 }
@@ -413,17 +413,17 @@ sub set {
     my ( $inner, $name, $val ) = @_;
     $inner->{'res'}{ $name } = $val;
 }
-sub getres {
+sub get_res {
     my ( $inner, $name ) = @_;
     return $inner->{'res'}{ $name } || undef; 
 }
-sub getallres {
+sub get_all_res {
     my ( $inner, $name ) = @_;
     return $inner->{'res'}; 
 }
 
 # get an array of items
-sub getarr {
+sub get_arr {
     my ( $inner ) = shift;
     my @ret;
     for my $key ( @_ ) {

@@ -23,7 +23,11 @@ sub home {
         $vars->{'result'} = "<hr>$a $action $b = $result";
     }
     my $tpl = $core->get('tpl');
-    $tpl->setvars( vars => $vars );
+    $tpl->set_vars( vars => $vars );
+}
+
+sub blah {
+    return "blahfunc";
 }
 
 1;

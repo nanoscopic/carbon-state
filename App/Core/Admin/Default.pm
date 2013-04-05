@@ -46,12 +46,12 @@ $spec = "
 sub init {
     my ( $core, $self ) = @_; # this self is src
     my $conf = $self->{'conf'} = $core->get('conf');
-    my $router = $core->getmod( 'web_router' );
+    my $router = $core->get_mod( 'web_router' );
     $router->route_path( path => "login", obj => 'core_admin', func => 'login', session => 'CORE' );
     $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'login' );
-    $self->{'base'} = xval( $core->getconf()->{'base'} );
+    $self->{'base'} = xval( $core->get_conf()->{'base'} );
     
-    my $api = $core->getmod( 'core_api' );
+    my $api = $core->get_mod( 'core_api' );
     $api->register_via_spec( mod => $self, session => 'CORE' );
     #print "****" . ref( $core ) . "*****\n";
     #core->blah();
@@ -74,7 +74,7 @@ sub login {
     my ( $core, $self ) = @_;
     my $base = $self->{'src'}{'base'};
     my $r = $self->{'r'};
-    my $cookieman = $r->getmod( mod => 'cookie_man' );
+    my $cookieman = $r->get_mod( mod => 'cookie_man' );
     
     if( $r->{'notice'} ) {
         #my $tmp = $r->{'tmp_notice'};
@@ -90,13 +90,13 @@ sub login {
         my $user = $postvars->{'user'};
         my $pw = $postvars->{'pw'};
         $r->out( text => "Login attempt by $user<br>" );
-        my $perm_man = $r->getmod( mod => 'core_perm_man' );
+        my $perm_man = $r->get_mod( mod => 'core_perm_man' );
         
         my $res = $perm_man->user_check_pw( user => $user, pw => $pw );
         if( $res->getres('ok') ) {
             $r->out( text => "Admin login success<br>" );
             
-            my $sessionman = $r->getmod( mod => 'session_man' );
+            my $sessionman = $r->get_mod( mod => 'session_man' );
             $sessionman = $sessionman->{'src'}; # we want the global one, not the request specific one
             my $session = $sessionman->create_session();
             $session->set_user( user => $user );

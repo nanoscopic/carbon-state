@@ -5,7 +5,7 @@ use strict;
 sub init {
     my ( $core, $self ) = @_;
     
-    my $api = $core->getmod( 'core_api' );
+    my $api = $core->get_mod( 'core_api' );
     $api->register_via_spec( mod => $self, session => 'APP' );
 }
 
@@ -13,7 +13,7 @@ sub home {
     my ( $core, $self ) = @_;
     my $r = $self->{'r'};
     
-    my $base = $core->getbase();
+    my $base = $core->get_base();
     my $vars = { base => $base };
     if( $r->{'type'} eq 'post' ) {
         my $post = $r->{'postvars'};
@@ -28,7 +28,7 @@ sub home {
         $vars->{'result'} = "<hr>$a $action $b = $result";
     }
     my $tpl = $core->get('tpl');
-    $tpl->setvars( vars => $vars );
+    $tpl->set_vars( vars => $vars );
 }
 
 sub test {

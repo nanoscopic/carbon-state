@@ -33,6 +33,7 @@
 </table>
 </form>
 {$result}
+{$OUT .= $m->blah(); }
 
 </body>
 </html>

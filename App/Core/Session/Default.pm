@@ -80,7 +80,7 @@ sub serialize {
     return Class::Core::_hash2xml( $self->{'dat'} );
 }
 
-sub getid {
+sub get_id {
     my ( $core, $self ) = @_;
     return $self->{'id'};
 }

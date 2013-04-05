@@ -35,29 +35,29 @@ $VERSION = "0.02";
 sub init {
     my ( $core, $self_src ) = @_;
     $self_src->{'path_routes'} = {};
-    my $base = $self_src->{'base'} = xval( $core->getconf()->{'base'} );
-    my $app = $core->getapp();
+    my $base = $self_src->{'base'} = xval( $core->get_conf()->{'base'} );
+    my $app = $core->get_app();
     my $xml = $self_src->{'_xml'};
     # <session name='CORE' perms='core_perm_man' />
     #$Data::Dumper::Maxdepth = 2;
     #$core->dumperx( "self_src", $self_src->{'_xml'} );
     
-    my $log = $self_src->{'log'} = $app->getmod( mod => 'log' );
-    #$self_src->{'perm'} = $app->getmod( mod => 'perm_man' );
+    my $log = $self_src->{'log'} = $app->get_mod( mod => 'log' );
+    #$self_src->{'perm'} = $app->get_mod( mod => 'perm_man' );
     $log->note( text => "Routing with web base of: $base" );
 }
 
 sub read_routes {
     my ( $core, $self_src ) = @_;
     my $xml = $self_src->{'_xml'};
-    my $log = $core->getmod('log');
+    my $log = $core->get_mod('log');
     
     my $sessions = forcearray( $xml->{'session'} );
     my $sesshash = $self_src->{'sesshash'} = {};
     for my $session ( @$sessions ) {
         my $name = xval $session->{'name'};
         my $perm_mod_name =  xval $session->{'perms'};
-        my $perm_mod = $core->getmod( $perm_mod_name );
+        my $perm_mod = $core->get_mod( $perm_mod_name );
         $sesshash->{ $name } = $perm_mod;
     }
     
@@ -88,7 +88,7 @@ sub route {
     my $path  = $r->{'path'};
     my $query = $r->{'query'};
     my $post  = $r->{'post'};
-    my $app   = $self->{'obj'}{'_app'}; # perhaps $core->getapp() would be better here
+    my $app   = $self->{'obj'}{'_app'}; # perhaps $core->get_app() would be better here
     my $rs    = $self->{'src'}{'path_routes'};
     
     #my $perm  = $self->{'src'}{'perm'};
@@ -99,7 +99,7 @@ sub route {
     }
     else {
         $r->out( text => 'error' );
-        $r->notfound(); 
+        $r->not_found(); 
         return;
     }
     
@@ -117,7 +117,7 @@ sub route {
         my $info;
         if( $info = $rs->{ $joined } ) {
             my $objname      = $info->{'obj'};
-            my $obj          = $r->getmod( mod => $objname );
+            my $obj          = $r->get_mod( mod => $objname );
             my $func         = $info->{'func'};
             my $session_name = $info->{'session'} || 'DEFAULT';
             my $perm = $self->{'src'}{'sesshash'}{ $session_name };
@@ -151,6 +151,7 @@ sub route {
             #$core->dumper( 'extra', $extra );
             if( %$extra && $extra->{'tpls'} ) {
                 $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
+                $tpl->{'mod_to_use'} = $obj;
             }
             my $res = $obj->$func( %$extra );
             if( $tpl ) {
@@ -167,7 +168,7 @@ sub route {
     }
     
     if( !$resolved ) {
-        $r->notfound();
+        $r->not_found();
         my $out = '';
         $out .= "<h2>Unhandled URL</h2>";
         $out .= "Path: $path<br>";
@@ -182,8 +183,8 @@ sub route {
 sub proc_xml {
     my ( $core, $self_src ) = @_;
     
-    my $log = $core->getmod('log');
-    my $tpl_engine = $core->getmod( 'tpl_engine', 0 ); # 0 is to say this module is not required
+    my $log = $core->get_mod('log');
+    my $tpl_engine = $core->get_mod( 'tpl_engine', 0 ); # 0 is to say this module is not required
     if( $tpl_engine ) {
         $self_src->{'tpl_engine'} = $tpl_engine;
         $log->note( text => "Router will read in templates");
@@ -217,7 +218,7 @@ sub handle_group {
     my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
     my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
     my $new_conf = $xml;
-    my $mux = App::Core::muxdup( $conf, $new_conf );
+    my $mux = App::Core::mux_dup( $conf, $new_conf );
     if( @$groups ) {
         for my $group ( @$groups ) {
             handle_group( $core, $self_src, $mux, $group );
@@ -233,7 +234,7 @@ sub handle_group {
 sub handle_route {
     my ( $core, $self_src, $conf, $route ) = @_;
     #$core->dumperx( 'conf', $conf );
-    my $mux = App::Core::muxdup( $conf, $route );
+    my $mux = App::Core::mux_dup( $conf, $route );
     #$core->dumperx( 'conf muxed with route', $conf );
     # in theory the conf here should be a mux of all the parent confs
     #my $obj     = xval $conf->{'obj'};
@@ -275,7 +276,7 @@ sub route_path {
     # session - the cookie name that contains a valid session key
     # bounce  - whether or not to bounce if there is no key, and where to bounce to
     # extra   - other information to pass along
-    my ( $path, $obj, $func, $session, $bounce, $extra, $file ) = $core->getarr( qw/path obj func session bounce extra file/ );
+    my ( $path, $obj, $func, $session, $bounce, $extra, $file ) = $core->get_arr( qw/path obj func session bounce extra file/ );
     
     #print "Adding path to $path\n";
     $self_src->{'path_routes'}{ $path } = {

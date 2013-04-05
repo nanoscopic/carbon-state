@@ -84,7 +84,7 @@ sub start_listening2 {
     # potentially spin off some threads that are listening
     
     my $ctx = $self->{'ctx'};
-    $app = $core->getapp();
+    $app = $core->get_app();
     $incoming = $self->{'incoming'} = zmq_socket( $ctx, ZMQ_REP );
     zmq_bind( $incoming, "tcp://*:9011" );
     #zmq_setsockopt( $incoming, ZMQ_IDENTITY, 'abc' ); # Indentity should not be hardcoded
@@ -108,7 +108,7 @@ sub handle_request {
     print Dumper( $xml );
     my $modname = $xml->{'mod'};
     my $func = $xml->{'func'};
-    my $mod = $app->getmod( mod => $modname );
+    my $mod = $app->get_mod( mod => $modname );
     my $msg = $mod->$func( %$xml );
     
     #my $msg = 'response';

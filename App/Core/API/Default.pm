@@ -36,9 +36,9 @@ $VERSION = "0.01";
 sub init {
     my ( $core, $self ) = @_; # this self is src
     my $conf = $self->{'conf'} = $core->get('conf');
-    my $base = $self->{'base'} = xval( $core->getconf()->{'base'}, 'api' );
-    my $sess_name = $self->{'sess_name'} = xval( $core->getconf()->{'session'}, 'APP' );
-    #my $router = $core->getmod( 'web_router' );
+    my $base = $self->{'base'} = xval( $core->get_conf()->{'base'}, 'api' );
+    my $sess_name = $self->{'sess_name'} = xval( $core->get_conf()->{'session'}, 'APP' );
+    #my $router = $core->get_mod( 'web_router' );
     #$router->route_path( path => $base, obj => 'core_api', func => 'api_call', session => 'APP' );
     $self->{'group_hash'} = {};
 }
@@ -79,7 +79,7 @@ sub register_via_spec {
     # way to call: register( mod => $self, session  => 'CORE', func_list => ['test'] )
     
     my $session = $core->get('session') || $self->{ 'sess_name' }; 
-    my $log = $core->getmod('log');
+    my $log = $core->get_mod('log');
     
     # Right now api functions are -not- namespaced via session.
     # If you want to split api stuff up you need to split it up by group, not by session
@@ -114,7 +114,7 @@ sub register_via_spec {
     #$core->dumper( "Refs", $fref );
     #$core->dumper( "Funcs", $funcs );
     
-    my $router = $core->getmod( 'web_router' );
+    my $router = $core->get_mod( 'web_router' );
     
     for my $funcname ( @$fref ) {
         my $func = $funcs->{ $funcname };
@@ -158,7 +158,7 @@ sub handle_api_call {
     my ( $core, $self ) = @_;
     my $r = $self->{'r'};
     my $modname = $core->get('mod');
-    my $mod = $r->getmod( mod => $modname );
+    my $mod = $r->get_mod( mod => $modname );
     my $func = $core->get('func');
     my $data = $mod->$func();
     #$core->dumper( 'data', $data );

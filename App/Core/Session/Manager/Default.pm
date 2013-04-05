@@ -55,7 +55,7 @@ sub get_session {
     my $ip = $r->{'ip'};
     my $id = '';
     
-    my $cookieman = $r->getmod( mod => 'cookie_man' );
+    my $cookieman = $r->get_mod( mod => 'cookie_man' );
     
     #print Dumper( $cookieman->{'cookies'} );
     #print Dumper( $cookieman->{'byname'} );

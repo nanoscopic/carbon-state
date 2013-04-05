@@ -30,24 +30,29 @@ package App::Core::ClassCoreExtend;
 # The subroutines in this package extend the typical Class::Core::INNER ( aka $core )
 use Data::Dumper;
 
-sub getmod {
+sub get_mod {
     my ( $a, $virt, $name, $req ) = @_;
-    #return $virt->{'r'}->getmod( mod => $name ) if( $virt->{'r'} );
+    my $r = $virt->{'r'};
+    if( $r ) {
+        my ( $b, $cls, $line ) = caller(0);
+        #print "GETMOD $cls #$line\n";
+        return $virt->{'r'}->get_mod( mod => $name ) 
+    }
     my $app = $virt->{'obj'}{'_app'};
-    return $app->getmod( mod => $name, req => $req );
+    return $app->get_mod( mod => $name, req => $req );
 }
 # This function fetches the global application conf
-sub getconf {
+sub get_conf {
     my ( $a, $virt, $name ) = @_;
     my $conf = $virt->{'obj'}{'_glob'}{'conf'};
     return $conf;
 }
-sub starttpl { 
+sub start_tpl { 
     my ( $a, $virt, $name ) = @_;
     my $tple;
-    if( $virt->{'r'} ) { $tple = $virt->{'r'}->getmod( mod => 'tpl_engine' ); }
-    else               { $tple = $virt->{'obj'}{'_app'}->getmod( mod => 'tpl_engine' ); }
-    return $tple->start( name => $name );
+    if( $virt->{'r'} ) { $tple = $virt->{'r'}->get_mod( mod => 'tpl_engine' ); }
+    else               { $tple = $virt->{'obj'}{'_app'}->get_mod( mod => 'tpl_engine' ); }
+    return $tple->start( name => $name, obj => $virt );
 }
 sub create {
     my $a = shift;
@@ -60,9 +65,9 @@ sub create {
     return $app->load_class( mod => $mod, r => $r, session => $session, parms => \%more );
 }
 
-sub getapp  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
-sub getbase { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}->getbase(); }
-sub getmode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
+sub get_app  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
+sub get_base { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}->get_base(); }
+sub get_mode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
 
 
 sub dumperx {
@@ -178,8 +183,8 @@ sub run {
     }
     
     $glob->{'conf'} = $xml;
-    my $r = $app->{'r'} = 'init';
-    my $session = $app->{'session'} = 'init';
+    my $r = $app->{'r'} = '';
+    my $session = $app->{'session'} = '';
     
     my $imodules = forcearray( $cxml->{'module'} ); # internal core modules
     my $modules  = forcearray( $xml->{'module'} );
@@ -308,13 +313,13 @@ sub run {
     }
     
     if( $cur_mode ) {
-        $app->runmode( mode => $cur_mode );
+        $app->run_mode( mode => $cur_mode );
     }
     
     return 0;
 }
 
-sub getbase {
+sub get_base {
     my ( $core, $app ) = @_;
     return $app->{'obj'}{'_glob'}{'conf'}{'base'}{'value'};
 }
@@ -329,7 +334,7 @@ sub end {
     }
 }
 
-sub getmod {
+sub get_mod {
     my ( $core, $app ) = @_;
     
     my $modname = $core->get('mod');
@@ -345,7 +350,7 @@ sub getmod {
     }
 }
 
-sub runmode {
+sub run_mode {
     my ( $core, $app ) = @_;
     my $mode = $core->get('mode');
     my $init = $mode->{'init'};
@@ -365,7 +370,7 @@ sub runmode {
             my $res = $mod->$func( %$arghash );
             $datahash{'ret'} = $res;
             if( ref( $res ) eq 'Class::Core::INNER' ) {
-                my $allres = $res->getallres();
+                my $allres = $res->get_all_res();
                 mux( \%datahash, $allres );
             }
         }
@@ -373,7 +378,7 @@ sub runmode {
     }
 }
 
-sub muxdup {
+sub mux_dup {
     my ( $a, $b ) = @_;
     my $n = {};
     for my $key ( keys %$a ) {
@@ -507,7 +512,7 @@ sub load_module {
             _name     => $name
         }, 
         _call     => $call, 
-        _callfunc => \&callfunc, 
+        _callfunc => \&call_func, 
         _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
         _xml      => $info->{'xml'}
         );
@@ -553,7 +558,7 @@ sub load_class {
 }
 
 # This function needs to make a remote call
-sub callfunc {
+sub call_func {
     my ( $app, $call, $func, $xml ) = @_;
     my $mod = xval $call->{'mod'};
     my $port = xval $call->{'port'};

@@ -40,8 +40,8 @@ sub init {
 sub run {
     my ( $core, $self ) = @_;
     my $app = $self->{'obj'}{'_app'};
-    $self->{'router'} = $app->getmod( mod => 'web_router' );
-    $self->{'log'} = $app->getmod( mod => 'log' );
+    $self->{'router'} = $app->get_mod( mod => 'web_router' );
+    $self->{'log'} = $app->get_mod( mod => 'log' );
     #print Dumper( $self->{'router'}{'route'} );
     #print Dumper( $self->{'router'} );
     my $server = App::Core::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );

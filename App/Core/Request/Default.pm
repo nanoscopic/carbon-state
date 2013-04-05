@@ -73,7 +73,7 @@ sub end {
     #print "Request was ended\n";
 }
 
-sub getmod {
+sub get_mod {
     my ( $core, $r ) = @_;
     #my $glob = $app->{'_glob'};
     my $modname = $core->get('mod');
@@ -119,11 +119,11 @@ sub get_body {
 sub redirect {
     my ( $core, $r ) = @_;
     my $url = $core->get('url');
-    $r->{'url'} = $r->{'app'}->getbase()."/$url";
+    $r->{'url'} = $r->{'app'}->get_base()."/$url";
     $r->{'otype'} = 'redirect';
 }
 
-sub notfound {
+sub not_found {
     my ( $core, $r ) = @_;
     $r->{'otype'} = 'notfound';
 }

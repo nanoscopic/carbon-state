@@ -38,10 +38,10 @@ use App::Core::Template::Default;
 
 sub init {
     my ( $core, $self ) = @_;
-    my $conf = $core->getconf(); # get the root of the configuration
+    my $conf = $core->get_conf(); # get the root of the configuration
     my $tpls = forcearray( $conf->{'tpl'} );
     
-    #my $log = $core->getmod('log');
+    #my $log = $core->get_mod('log');
     #$core->dumperx( 'tpls', $tpls );
     
     $self->{'tpls'} = {};
@@ -81,7 +81,7 @@ sub load_xml { # load a template from it's xml definition
     # instantiate a template object and return it
     my $file = xval $xml->{'file'};
     
-    my $log = $core->getmod('log');
+    my $log = $core->get_mod('log');
     $log->note( text => "Loaded template $name from file $file" );
     
     my $tpl = $tpls->{ $name } = App::Core::Template::Default->new( file => $file );
@@ -97,7 +97,10 @@ sub start { # get and start a template
     my ( $core, $self ) = @_;
     my $name = $core->get('name');
     my $tpl = $self->get( name => $name );
-    return $core->requestify( $tpl );
+    my $tplr = $core->requestify( $tpl );
+    my $obj = $core->get('obj');
+    $tplr->{'obj'} = $obj;
+    return $tplr;
 }
 
 sub get { # fetch a loaded template by its short name

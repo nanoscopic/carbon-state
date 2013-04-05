@@ -168,7 +168,7 @@ sub flatten {
     return $content;
 }
 
-sub toraw {
+sub to_raw {
     my $info = shift;
     #print Dumper( $info );
     my $rawcontent = uri_escape( flatten( $info ) );
@@ -180,21 +180,21 @@ sub toraw {
     return $info->{'name'}."=$rawcontent; path=$path; expires=$expires";
 }
 
-sub setheader {
+sub set_header {
     my ( $core, $self ) = @_;
     #my $cookies = $core->get('cookies');
     my $cookies = $self->{'cookies'};
     #print Dumper( $cookies );
     my $headers = '';
     for my $cookie ( @$cookies ) {
-        my $raw = toraw( $cookie );
+        my $raw = to_raw( $cookie );
         $headers .= "Set-Cookie: $raw\r\n" if( $raw );
     }
     return $headers;
 }
 
 # this returns -just- the cookie data
-sub rawcookies {
+sub raw_cookies {
     my ( $core, $self ) = @_;
     my $cookies = $self->{'cookies'};
     my @set;

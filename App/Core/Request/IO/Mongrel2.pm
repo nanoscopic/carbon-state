@@ -61,7 +61,7 @@ sub init {
     $self->{'running'} = 1;
     $stop = 0;
     my $app = $self->{'obj'}{'_app'};
-    my $sman = $self->{'session_man'} = $app->getmod( mod => 'session_man' );
+    my $sman = $self->{'session_man'} = $app->get_mod( mod => 'session_man' );
     if( !$sman ) {
         confess( "Cannot find session manager" );
     }
@@ -80,13 +80,13 @@ sub end {
 sub run {
     my ( $core, $self ) = @_;
     
-    my $app = $core->getapp();
-    $self->{'request_man'} = $app->getmod( mod => 'request_man' );
-    my $log = $self->{'log'} = $app->getmod( mod => 'log' );
+    my $app = $core->get_app();
+    $self->{'request_man'} = $app->get_mod( mod => 'request_man' );
+    my $log = $self->{'log'} = $app->get_mod( mod => 'log' );
     my $conf = $self->{'_xml'};
     my $threads = xval $conf->{'threads'}, 2;
     
-    #my $session_man = $app->getmod( mod => 'session_man' );
+    #my $session_man = $app->get_mod( mod => 'session_man' );
     #my $session_hash = $session_man->{'sessions'};
     
     $log->note( text => "Spawning $threads thread(s) to handle incoming requests" );
@@ -306,7 +306,7 @@ sub handle_request {
         type => $type
         );
     
-    my $cookieman = $r->getmod( mod => 'cookie_man' );
+    my $cookieman = $r->get_mod( mod => 'cookie_man' );
     #$cookieman = $cookieman->{'src'};
     #print "Session man: $cookieman\n";
     
@@ -317,7 +317,7 @@ sub handle_request {
     #$r->{'session'} = $sman->get_session( r => $r );
     # Session fetching is now handled in the router ( since different paths may need different session information )
     
-    my $router = $r->getmod( mod => 'web_router' );
+    my $router = $r->get_mod( mod => 'web_router' );
 
     my $res = $router->route( session_man => $sman );
     if( $type =~ m/notice/ ) {
@@ -325,7 +325,7 @@ sub handle_request {
     }
     
     my $typeinfo = $r->get_type();
-    my $restype = $typeinfo->getres('type');
+    my $restype = $typeinfo->get_res('type');
     
     #my $restype = $res->getres('type');
     #my $body;
@@ -335,7 +335,7 @@ sub handle_request {
     
     my $headers = $r->get_headers();
     
-    $headers .= $cookieman->setheader();
+    $headers .= $cookieman->set_header();
     my $raw;
     if( $body ne '' ) {
         my $blen = length( $body );

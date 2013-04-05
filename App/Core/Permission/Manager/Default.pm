@@ -41,7 +41,7 @@ sub init {
     my @meths = split( /,/,$method );
     my $prefixes = $self->{'prefixes'} = {};
     for my $methname ( @meths ) {
-        my $meth = $core->getmod( $methname );
+        my $meth = $core->get_mod( $methname );
         my $prefix_list = $meth->get_prefixes();
         for my $prefix ( @$prefix_list ) {
             $prefixes->{ $prefix } = $meth;

@@ -39,7 +39,7 @@ sub init {
 
 sub new_request {
     my ( $core, $manager ) = @_;
-    my $app = $core->getapp();
+    my $app = $core->get_app();
     my $path = $core->get( 'path' );
     # query post cookies
     my $query = $core->get('query');

@@ -50,7 +50,7 @@ sub init_request {
     $self->{'vars'} = 0;
 }
 
-sub setvars {
+sub set_vars {
     my ( $core, $self ) = @_;
     my $vars = $core->get('vars');
     $self->{'vars'} = $vars;
@@ -61,9 +61,23 @@ sub setvars {
 sub run {
     my ( $core, $self ) = @_;
     return 0 if( !$self->{'vars'} );
+    #$Data::Dumper::Maxdepth = 2;
     
+    my $vars = $self->{'vars'};
+    $vars->{'core'} = \$core;
     my $src = $self->{'src'};
-    return $src->{'tpl'}->fill_in( HASH => $self->{'vars'} );
+    my $log = $core->get_mod('log');
+    if( $self->{'mod_to_use'} ) {
+        my $mod = $self->{'mod_to_use'};
+        #$core->dumper( 'mod', $mod );
+        my $class = $mod->{'obj'}{'_class'};
+        $vars->{'m'} = \$mod;
+        $log->note( text => "Using package $class");
+        return $src->{'tpl'}->fill_in( HASH => $vars, PACKAGE => $class );
+    }
+    else {
+        return $src->{'tpl'}->fill_in( HASH => $vars );
+    }
     # request needs to be passed into this, in order to grab the request version of the module that the context runs in
     #   without having this, any functions run within the template would not be able to check permissions based on the logged in user
     
