@@ -36,10 +36,20 @@ use App::Core::Template::Default;
 
 # This module should be registered as tpl_engine in the configuration so that other modules can depend upon it properly
 
+our $spec = "<func name='init_request'/>";
+
 sub init {
     my ( $core, $self ) = @_;
     my $conf = $core->get_conf(); # get the root of the configuration
     my $tpls = forcearray( $conf->{'tpl'} );
+    my $xml = $self->{'_xml'};
+    my $modrefs = forcearray( $xml->{'moduleref'} );
+    my $refs = $self->{'modrefs'} = {};
+    for my $modref ( @$modrefs ) {
+        my $name = xval $modref->{'name'};
+        my $mod = xval $modref->{'mod'};
+        $refs->{ $name } = $mod;
+    }
     
     #my $log = $core->get_mod('log');
     #$core->dumperx( 'tpls', $tpls );
@@ -51,6 +61,11 @@ sub init {
         }
     }
     
+}
+
+sub init_request {
+    my ( $core, $self ) = @_;
+    $self->{'tpls'} = {};
 }
 
 # In some sense we need to load up all the templates specified in the system configuration
@@ -84,7 +99,7 @@ sub load_xml { # load a template from it's xml definition
     my $log = $core->get_mod('log');
     $log->note( text => "Loaded template $name from file $file" );
     
-    my $tpl = $tpls->{ $name } = App::Core::Template::Default->new( file => $file );
+    my $tpl = $tpls->{ $name } = App::Core::Template::Default->new( file => $file, modulerefs => $self->{'modrefs'} );
     
     return $tpl;
 }
@@ -98,22 +113,50 @@ sub start { # get and start a template
     my $name = $core->get('name');
     my $tpl = $self->get( name => $name );
     my $tplr = $core->requestify( $tpl );
+    my $base = $core->get_base();
+    $tplr->set_vars( { tple => $self, base => $base } );
     my $obj = $core->get('obj');
-    $tplr->{'obj'} = $obj;
+    $tplr->{'mod_to_use'} = $obj;
     return $tplr;
+}
+
+sub run_map {
+    my ( $core, $self) = @_;
+    my $maps = $core->get('map');
+    #$core->dumper( 'maps', $maps );
+    $maps = forcearray( $maps );
+    my $tpls = $self->{'src'}{'tpls'};
+    my $ltpls = $self->{'tpls'};
+    for my $map ( @$maps ) {
+        my $alias = $map->{'alias'};
+        my $tpl = $map->{'tpl'};
+        $ltpls->{ $alias } = $tpls->{ $tpl };
+    }
+    #$core->dumper( 'tpls', $tpls,1 );
+}
+
+sub run {
+    my ( $core, $self ) = @_;
+    my $tplname = $core->get('tpl');
+    my $vars = $core->get('vars');
+    my $tpl = $self->start( name => $tplname );
+    $tpl->set_vars( $vars );
+    return $tpl->run();
 }
 
 sub get { # fetch a loaded template by its short name
     my ( $core, $self ) = @_;
-    if( $self->{'src'} ) { $self = $self->{'src'}; }
+    #if( $self->{'src'} ) { $self = $self->{'src'}; }
     my $name = $core->get('name');
     
-    my $tpls = $self->{'tpls'};
+    my $tpls = $self->{'src'}{'tpls'};
+    my $ltpls = $self->{'tpls'};
     #$core->dumper( 'tpls', $tpls );
-    if( !$tpls->{$name} ) {
+    my $ret = $tpls->{ $name } || $ltpls->{ $name };
+    if( !$ret ) {
         confess "Cannot fetch template named $name";
     }
-    return $tpls->{ $name };
+    return $ret;
 }
 
 1;

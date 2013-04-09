@@ -44,6 +44,7 @@ sub init {
 
 sub note {
     my ( $core, $self ) = @_;
+    $self = $self->{'src'} if( $self->{'src'} );
     my $text = $core->get('text');
     my $msg = "note: $text\n";
     print STDERR $msg if( $self->{'console'} );
@@ -51,6 +52,7 @@ sub note {
 
 sub error {
     my ( $core, $self ) = @_;
+    $self = $self->{'src'} if( $self->{'src'} );
     my $text = $core->get('text');
     my $msg = "error: $text\n";
     if( $self->{'console'} ) {

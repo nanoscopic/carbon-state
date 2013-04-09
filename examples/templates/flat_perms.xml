@@ -1,0 +1,23 @@
+<xml>
+    <test>blah</test>
+    <perm name='test'/>
+    
+    <group name='blah' define='l_a & l_b'>
+        <perm name='test'/>
+    </group>
+    
+    <group name='b2' define='l_blah | l_blah'>
+        <perm name='fsd'/>
+    </group>
+    
+    <group name='a'>
+        <member id='admin'/>
+    </group>
+    
+    <group name='b'>
+        <member id='admin'/>
+        <member id='test'/>
+    </group>
+    
+    <user id='admin' pw='pass' />
+</xml>

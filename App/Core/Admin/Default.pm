@@ -51,8 +51,8 @@ sub init {
     $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'login' );
     $self->{'base'} = xval( $core->get_conf()->{'base'} );
     
-    my $api = $core->get_mod( 'core_api' );
-    $api->register_via_spec( mod => $self, session => 'CORE' );
+    #my $api = $core->get_mod( 'core_api' );
+    #$api->register_via_spec( mod => $self, session => 'CORE' );
     #print "****" . ref( $core ) . "*****\n";
     #core->blah();
 }
@@ -93,7 +93,7 @@ sub login {
         my $perm_man = $r->get_mod( mod => 'core_perm_man' );
         
         my $res = $perm_man->user_check_pw( user => $user, pw => $pw );
-        if( $res->getres('ok') ) {
+        if( $res->get_res('ok') ) {
             $r->out( text => "Admin login success<br>" );
             
             my $sessionman = $r->get_mod( mod => 'session_man' );
@@ -102,10 +102,10 @@ sub login {
             $session->set_user( user => $user );
             $session->save();
             $r->set_permissions( perms => $perm_man->user_get_permissions( user => $user ) );
-            my $sid = $session->getid();
+            my $sid = $session->get_id();
             
-            my $cookie = $cookieman->create( name => 'CORE', content => { session_id => $sid }, path => '/', expires => 'Tue, 28-Mar-2013 19:51:45 GMT' );
-            $cookieman->clear();
+            my $cookie = $cookieman->create( name => 'CORE', content => { session_id => $sid }, expires => [1,0,0,0] );
+            #$cookieman->clear();
             #print Dumper( $cookie );
             $cookieman->add( cookie => $cookie );
             

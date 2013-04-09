@@ -143,6 +143,7 @@ sub AUTOLOAD {
     my $spec = $obj->{'_spec'};
     my $pcount = ( scalar @_ );
     my $x = 0;
+    my %parms;
     if( $pcount % 2 ) {
         if( $pcount != 1 ) {
             confess "Non even list - $cls->$tocall\n";
@@ -151,7 +152,10 @@ sub AUTOLOAD {
             $x = $_[0];
         }
     }
-    my %parms = @_;
+    else {
+        %parms = @_;
+    }
+    
     my $allerr = '';
     my $fspec;
     if( $spec ) {

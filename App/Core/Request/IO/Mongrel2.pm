@@ -30,7 +30,7 @@ use ZMQ::LibZMQ3;
 use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
 #use ZMQ::Constants ':all';
-use ZMQ::Constants qw/ZMQ_PULL ZMQ_PUB ZMQ_IDENTITY ZMQ_RCVMORE ZMQ_POLLIN/;
+use ZMQ::Constants qw/ZMQ_PULL ZMQ_PUB ZMQ_IDENTITY ZMQ_RCVMORE ZMQ_POLLIN ZMQ_MSG_MORE/;
 use URI::Simple;
 use CGI;
 use Text::TNetstrings qw/:all/;
@@ -337,6 +337,7 @@ sub handle_request {
     
     $headers .= $cookieman->set_header();
     my $raw;
+    use bytes;
     if( $body ne '' ) {
         my $blen = length( $body );
         $headers .= "Content-Length: $blen\r\n";
@@ -348,10 +349,36 @@ sub handle_request {
     
     my $idlen = length( $id );
         
+    
     my $msg = "blah2 $idlen:$id, HTTP/1.1 $code\r\n$raw";
     #print "Msg: $msg\n";
     
-    zmq_send( $outgoing, $msg );
+    my $len = length( $msg );
+    
+    if( $len > 100000 ) {
+        # Theoretically this should work, but Mongrel2 apparently does not support this
+        #for( my $st = 0; $st < $len; $st+= 100000 ) {
+        #    my $end = $st + 100000 - 1;
+        #    if( $end > $len ) { $end = $len; }
+        #    if( $end < $len ) {
+        #        $log->note( text => "Sending $st - $end" );
+        #        zmq_send( $outgoing, substr( $msg, $st, $end ), -1, ZMQ_MSG_MORE );
+        #    }
+        #    else {
+        #        $log->note( text => "Sending $st - $end" );
+        #        zmq_send( $outgoing, substr( $msg, $st, $end ) );
+        #    }
+        #}
+        
+        # This -seems- to work more often than the zmq_send below for large messages
+        my $ob = zmq_msg_init_data( $msg );
+        zmq_sendmsg( $outgoing, $ob );
+        zmq_msg_close( $ob );
+    }
+    else {
+        zmq_send( $outgoing, $msg );
+        
+    }
     
     $r->end();
 }

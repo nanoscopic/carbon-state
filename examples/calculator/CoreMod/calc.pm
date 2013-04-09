@@ -9,7 +9,8 @@ sub home {
     my ( $core, $self ) = @_;
     my $r = $self->{'r'};
     
-    my $vars = {};
+    my $base = $core->get_base();
+    my $vars = { base => $base };
     if( $r->{'type'} eq 'post' ) {
         my $post = $r->{'postvars'};
         my $a = $post->{'a'};

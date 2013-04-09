@@ -36,13 +36,13 @@ use Data::Dumper;
 #use URI::Encode;
 use URI::Escape qw/uri_escape uri_unescape/;
 use Carp;
+use Date::Format;
 
 use vars qw/$VERSION/;
 $VERSION = "0.02";
 
 sub init {
     my ( $core, $self ) = @_;
-    $self->{'cookies'} = [];
     $self->{'byname'} = {};
 }
 
@@ -50,40 +50,26 @@ sub parse {
     my ( $core, $self ) = @_;
     #print "Parsing cookies\n";
     my $raw = $core->get('raw');
+    my $log = $core->get_mod('log');
     #'MY_COOKIE=BEST_COOKIE%3Dchocolatechip; B=BEST_COOKIE%3Dchocolatechip',
     my @rawcookies = split( '; ', $raw );
-    my @cookies;
     $self->{'byname'} ||= {};
     my $byname = $self->{'byname'};
     for my $rawcookie ( @rawcookies ) {
         if( $rawcookie =~ m/^([A-Z_]+)=(.+)/ ) {
             my $name = $1;
             my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
-            #print "Decoded cookie:\n";
-            #print Dumper( $cookie );
-            print "Found cookie named $name\n";
+            $log->note( text =>  "Found cookie named $name" );
             $byname->{ $name } = $cookie;
-            push( @cookies, $cookie );
         }
         elsif( $rawcookie =~ m/^([A-Z_]+)=/ ) {
             my $name = $1;
             my $cookie = { name => $name, content => {} };
-            #$byname->{ $name } = $cookie;
-            #push( @cookies, $cookie );
         }
         else {
             die "cookie is not of form: ([A-Z_]+)=(.+)\nIs: $rawcookie";
         }
     }
-    #return \@cookies;
-    #print Dumper( \@cookies );
-    return $self->{'cookies'} = \@cookies;
-}
-
-sub clear {
-    my ( $core, $self ) = @_;
-    $self->{'cookies'} = [];
-    $self->{'byname'} = {};
 }
 
 sub showall {
@@ -102,16 +88,10 @@ sub add {
     my ( $core, $self ) = @_;
     my $cookie = $core->get('cookie');
     my $name = $cookie->{'name'};
-    #print "Adding cookie:\n";
-    #print Dumper( $cookie );
     $self->{'byname'}{$name} = $cookie;
-    my $cookies = $self->{'cookies'};
-    push( @$cookies, $cookie );
 }
 
 sub decode {
-    #my ( $core, $self ) = @_;
-    #my $raw = $core->get('raw');
     my $raw = shift;
     if( !$raw ) { confess( 'raw not set' ); }
     my $hash = {};
@@ -125,31 +105,47 @@ sub decode {
     return $hash;
 }
 
+sub extend {
+    my ( $core, $self ) = @_;
+    my $cname = $core->get('cookie');
+    my $len = $core->get('len');
+    my $cookie = $self->{'byname'}{ $cname };
+    
+    my $future = unix_plus_some( 0, @$len ); # some time in the future from now
+    my $expires = time2str('%a, %e-%b-%Y %X GMT', $future, 'GMT');
+    $expires =~ s/  / /; # remove the double space caused by a day of month that is 1 character
+    
+    $cookie->{'expires'} = $expires;
+    $cookie->{'path'} = '/';
+    return $cookie;
+}
+
 sub create {
     my ( $core, $self ) = @_;
     my $name    = $core->get('name');
     my $content = $core->get('content'); # ( can be text or a hash ref )
-    my $path    = $core->get('path');
+    my $path    = $core->get('path') || '/';
     my $expires = $core->get('expires');
-    #if( ref( $content ) eq 'HASH' ) {
-    #    my @set;
-    #    for my $key ( keys %$content ) {
-    #        my $str = "$key=";
-    #        my $val = $content->{ $key };
-    #        $val =~ s|([=&\\])|\\$1|g;
-    #        $str .= $val;
-    #        push( @set, $str );
-    #    }
-    #    $content = join( '&', @set );
-    #}
-     
-    #my $raw = uri_escape( $content );
     
-    #my $c1 = $cookieman->create( name => 'MY_COOKIE', content => 'a=test1', path => '/', expires => 'Tue, 12-Feb-2013 19:51:45 GMT' );
-    #$headers .= "Set-Cookie: MY_COOKIE=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
-    #    $headers .= "Set-Cookie: B=BEST_COOKIE\%3Dchocolatechip; path=/; expires=Tue, 12-Feb-2013 19:51:45 GMT\r\n";
+    if( ref( $expires ) eq 'ARRAY' ) {
+        my $future = unix_plus_some( 0, @$expires ); # some time in the future from now
+        $expires = time2str('%a, %e-%b-%Y %X GMT', $future, 'GMT');
+        $expires =~ s/  / /; # remove the double space caused by a day of month that is 1 character
+    }
+    
     return { name => $name, content => $content, path => $path, expires => $expires };
 }
+
+sub unix_plus_some {
+    my ( $unix, $days, $hours, $mins, $secs ) = @_;
+    my $now_unix = $unix ? $unix : time;
+    my $now_jul = unix_to_julian( $now_unix );
+    my $new_jul = $now_jul + $days + ( $hours * 3600 + $mins * 60 + $secs ) / 86400;
+    my $new_unix = julian_to_unix( $new_jul );
+    return $new_unix;
+}
+sub unix_to_julian { return ( $_[0] / 86400.0 ) + 2440588; }
+sub julian_to_unix { return ( $_[0] - 2440588 ) * 86400.0; }
 
 sub flatten {
     my $cookie = shift;
@@ -170,7 +166,7 @@ sub flatten {
 
 sub to_raw {
     my $info = shift;
-    #print Dumper( $info );
+    
     my $rawcontent = uri_escape( flatten( $info ) );
     my $path = $info->{'path'};
     my $expires = $info->{'expires'};
@@ -182,24 +178,26 @@ sub to_raw {
 
 sub set_header {
     my ( $core, $self ) = @_;
-    #my $cookies = $core->get('cookies');
-    my $cookies = $self->{'cookies'};
-    #print Dumper( $cookies );
+   
     my $headers = '';
-    for my $cookie ( @$cookies ) {
+    my $byname = $self->{'byname'};
+    for my $cname ( keys %$byname ) {
+        my $cookie = $byname->{ $cname };
         my $raw = to_raw( $cookie );
         $headers .= "Set-Cookie: $raw\r\n" if( $raw );
     }
+    
     return $headers;
 }
 
 # this returns -just- the cookie data
 sub raw_cookies {
     my ( $core, $self ) = @_;
-    my $cookies = $self->{'cookies'};
     my @set;
-    for my $cookie ( @$cookies ) {
-        #print Dumper( $cookie );
+    
+    my $byname = $self->{'byname'};
+    for my $cname ( keys %$byname ) {
+        my $cookie = $byname->{ $cname };
         my $raw = $cookie->{'name'}."=".uri_escape( flatten( $cookie ) );
         push( @set, $raw ) if( $raw );
     }

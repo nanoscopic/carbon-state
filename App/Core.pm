@@ -66,21 +66,25 @@ sub create {
 }
 
 sub get_app  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
-sub get_base { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}->get_base(); }
+sub get_base { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_glob'}{'conf'}{'base'}{'value'}; }
 sub get_mode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
 
 
 sub dumperx {
-    my ( $a, $virt, $name, $val ) = @_;
+    my ( $a, $virt, $name, $val, $dep ) = @_;
     my ($package, $filename, $line) = caller(1);
-    my $data = "XDump from $package #$line\n  $name:\n  " . Dumper( App::Core::simplify( $val ) );
+    my $d = Data::Dumper->new( [App::Core::simplify( $val )] );
+    $d->Maxdepth( $dep ) if( $dep );
+    my $data = "XDump from $package #$line\n  $name:\n  " . $d->Dump();
     print $data;
     return $data;
 }
 sub dumper {
-    my ( $a, $inner, $name, $val ) = @_;
+    my ( $a, $inner, $name, $val, $dep ) = @_;
     my ($package, $filename, $line) = caller(1);
-    my $data = "Dump from $package #$line\n  $name:\n  " . Dumper( $val );
+    my $d = Data::Dumper->new( [$val] );
+    $d->Maxdepth( $dep ) if( $dep );
+    my $data = "Dump from $package #$line\n  $name:\n  " . $d->Dump();
     print $data;
     return $data;
 }
@@ -430,10 +434,12 @@ sub slurp {
     my $contents;
     open( SLURP_FILE, $filename );
     binmode( SLURP_FILE ); # This line is only needed on Windows Perl, to prevent the file being read in text mode
-    {
-        local $/ = undef; # turns off the line seperator
-        $contents = <SLURP_FILE>;
-    }
+    #{
+    #    local $/ = undef; # turns off the line seperator
+    #    $contents = <SLURP_FILE>;
+    #}
+    my $buffer;
+    while( read( SLURP_FILE, $buffer, 10000000 ) and $contents .= $buffer ) {};
     close( SLURP_FILE );
     return $contents;
 }

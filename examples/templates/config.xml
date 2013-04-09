@@ -5,7 +5,9 @@
         <win32color/>
     </log>
     
-    <tpl name='calc' file='calc.tpl' />
+    <tpl name='main' file='main.tpl' />
+    <tpl name='header_a' file='header.tpl' />
+    <tpl name='nav' file='nav.tpl' />
     
     <types>
         <type ext='png'      type='image/png'  life='8h' cacheLimit='40k' cacheTotal='4m' />
@@ -17,10 +19,11 @@
     </types>
     
     <mode name='default'>
-        <module name='calc_perm_flat'   file='App::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
-        <module name='calc_perm_man'    file='App::Core::Permission::Manager::Default' method='calc_perm_flat' />
+        <module name='ex_perm_flat'   file='App::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='ex_perm_man'    file='App::Core::Permission::Manager::Default' method='ex_perm_flat' />
     
-        <module name='calc' file='CoreMod::calc' />
+        <module name='example' file='CoreMod::example' />
+        <module name='header' file='CoreMod::header' />
         
         <module name='tpl_engine' file='App::Core::Template::Engine::TextTemplate'>
             <!-- <moduleref name='l' mod='layout' /> -->
@@ -33,7 +36,7 @@
         </module>
         
         <module name='web_router'>
-            <session name='APP' perms='calc_perm_man' />
+            <session name='APP' perms='ex_perm_man' />
             <routes file='routes.xml'/>
         </module>
         

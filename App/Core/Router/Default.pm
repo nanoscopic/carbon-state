@@ -90,6 +90,7 @@ sub route {
     my $post  = $r->{'post'};
     my $app   = $self->{'obj'}{'_app'}; # perhaps $core->get_app() would be better here
     my $rs    = $self->{'src'}{'path_routes'};
+    my $log   = $core->get_mod('log');
     
     #my $perm  = $self->{'src'}{'perm'};
     
@@ -111,9 +112,10 @@ sub route {
     my $full = 1;
     my @parts = split('/',$path );
     my $tpl = 0;
+    my $tple = 0;
     while( @parts ) {
         my $joined = join('/', @parts );
-        print "Testing $joined\n";
+        $log->note( text => "Testing $joined" );
         my $info;
         if( $info = $rs->{ $joined } ) {
             my $objname      = $info->{'obj'};
@@ -132,13 +134,17 @@ sub route {
             my $extra        = $info->{'extra'} || {};
             
             my $session      = $sman->get_session( r => $r, cookie => $session_name );
+            
             if( $session ) {
-                print "Loaded a session\n";
+                my $cookieman = $r->get_mod( mod => 'cookie_man' );
+                my $cookie = $cookieman->extend( cookie => $session_name, len => [ 1, 0, 0, 0 ] );
+                my $date = $cookie->{'expires'};
+                $log->note( text => "Loaded a session - extended cookie till $date" );
                 $session->show();
                 $r->set_permissions( perms => $perm->user_get_permissions( user => $session->get_user() ) );
             }
             if( $bounce && !$session ) {
-                print "Bounce to $bounce\n";
+                $log->note( text =>  "Bounce to $bounce" );
                 $r->redirect( url => $bounce );
                 return;
             }
@@ -152,6 +158,12 @@ sub route {
             if( %$extra && $extra->{'tpls'} ) {
                 $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
                 $tpl->{'mod_to_use'} = $obj;
+                my $conf = $extra->{'conf'};
+                my $map = $conf->{'map'};
+                if( $map ) {
+                    $tple = $core->get_mod('tpl_engine');
+                    $tple->run_map( map => $map );
+                }
             }
             my $res = $obj->$func( %$extra );
             if( $tpl ) {
@@ -197,6 +209,7 @@ sub proc_xml {
     #$core->dumperx( 'xml', $xml );
     my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
     my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
+    my $folders = forcearray( $xml->{'folder'} ); delete $xml->{'folder'};
     my $conf = $xml;
     #$core->dumper( 'routes', $routes );
     #$core->dumperx( 'conf', $conf );
@@ -211,12 +224,17 @@ sub proc_xml {
             handle_route( $core, $self_src, $conf, $route );
         }
     }
+    if( @$folders ) {
+        my $fs = $core->get_mod( 'file_server' );
+        $fs->register_folders( folders => $folders, conf => $conf );
+    }
 }
 
 sub handle_group {
     my ( $core, $self_src, $conf, $xml ) = @_;
     my $routes = forcearray( $xml->{'route'} ); delete $xml->{'route'};
     my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
+    my $folders = forcearray( $xml->{'folder'} ); delete $xml->{'folder'};
     my $new_conf = $xml;
     my $mux = App::Core::mux_dup( $conf, $new_conf );
     if( @$groups ) {
@@ -228,6 +246,10 @@ sub handle_group {
         for my $route ( @$routes ) {
             handle_route( $core, $self_src, $mux, $route );
         }
+    }
+    if( @$folders ) {
+        my $fs = $core->get_mod( 'file_server' );
+        $fs->register_folders( folders => $folders, conf => $conf );
     }
 }
 
@@ -260,7 +282,7 @@ sub handle_route {
             my $tplname = xval $tplxml->{'name'};
             $tpl = $tple->get( name => $tplname );
         }
-        $info->{'extra'} = { tpls => $tpl };
+        $info->{'extra'} = { tpls => $tpl, conf => $info };
     }
     
     #$core->dumper( 'info', $info );

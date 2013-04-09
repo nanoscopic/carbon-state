@@ -1,9 +1,12 @@
 <xml>
     <file>1</file>
     <session>APP</session>
-    <obj>calc</obj>
+    <obj>example</obj>
     <group>
-        <route path='calc' func='home'><tpl name='calc'/></route>
+        <route path='home' func='home'>
+            <tpl name='main'/>
+            <map alias='header' tpl='header_a'/>
+        </route>
     </group>
     <fileroot></fileroot>
     <folder url='static' sys='static' match='\.jpg$'/>
