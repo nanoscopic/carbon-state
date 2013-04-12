@@ -1,4 +1,4 @@
-# App::Core::Template::Default
+# App::Core::Template::Dummy
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Template::Default - App::Core Component
+App::Core::Template::Dummy - App::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Template::Default - App::Core Component
 
 =cut
 
-package App::Core::Template::Default;
+package App::Core::Template::Dummy;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -42,14 +42,6 @@ sub construct {
     my $file = $self->{'file'}; # file is the actual file containing the template content
     my $xml = $self->{'base'}; # base is the base hash for static values to use in the template
     my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a app::core module name or a reference to a class::core object
-    #$self->{'src'} = App::Core::slurp( $self->{'file'} );
-    $self->{'tpl'} = Text::Template->new( TYPE => 'FILE', SOURCE => $self->{'file'} );
-    if( !$self->{'tpl'} ) {
-        my $log = $core->get_mod('log');
-        my $terr = $Text::Template::ERROR;
-        $log->error( text => "Template error - file $self->{'file'} - $terr" );
-    }
-    # modulerefs is set within self already
 }
 
 sub init_request {
@@ -78,76 +70,7 @@ sub set_subhash {
 # This information needs to be used automatically by the 'run' function to pass the results of the
 #   templates being run into the templates being evaluated.
 sub sub_tpl {
-    my ( $core, $self ) = @_;
-    my $tpl = $core->get('tpl');
-    my $istpl = 1;
-    if( !$tpl ) {
-        my $name = $core->get('name');
-        $istpl = 0;
-        $tpl = $name;
-    }
-    my $vars = $core->get('vars') || {};
-    my $mod = $core->get('mod');
-    my $tpls = $self->{'tpls'};
-    
-    $self->{'vars'} ||= {};
-    
-    # $core->dumper('mod',$mod);
-    my $ret = 0;
-    if( $tpl =~ m/\./ ) {
-        my @parts = split(/\./, $tpl );
-        my $start_tpl_name = $parts[0];
-        my $cur_info = $tpls->{ $start_tpl_name };
-        if( !$cur_info ) {
-            $tpls->{ $start_tpl_name } = $cur_info = { name => $tpl };
-        }
-        shift @parts;
-        my $len = $#parts + 1;
-        for( my $i=1;$i<=$len;$i++ ) {
-            my $subs = $cur_info->{'subs'};
-            if( !$subs ) {
-                $subs = $cur_info->{'subs'} = {};
-            }
-            my $sub_name = shift @parts;
-            my $sub_info = $subs->{ $sub_name };
-            if( !$sub_info ) {
-                my $tple = $core->get_mod('tpl_engine');
-                $ret = $tple->start( name => $sub_name );
-                $sub_info = $subs->{ $sub_name } = { name => $sub_name, tpl => $ret, istpl => $istpl };
-            }
-            if( $i == $len ) { # set the vars here
-                if( $sub_info->{'vars'} ) {
-                    App::Core::mux( $sub_info->{'vars'}, $vars );
-                }
-                else {
-                    $sub_info->{'vars'} = $vars;
-                }
-                if( $mod ) {
-                    #$core->dumper( 'test', 'setting mod' );
-                    $sub_info->{'mod'} = $mod
-                }
-                
-                
-            }
-            $cur_info = $sub_info;
-        }
-    }
-    else {
-        my $tpl_info = $tpls->{ $tpl };
-        if( !$tpl_info ) {
-            $tpls->{ $tpl } = $tpl_info = { name => $tpl, vars => $vars, istpl => $istpl };
-            my $tple = $core->get_mod('tpl_engine');
-            $ret = $tpl_info->{'tpl'} = $tple->start( name => $tpl );
-        }
-        else {
-            App::Core::mux( $tpl_info->{'vars'}, $vars );
-        }
-        if( $mod ) {
-            #$core->dumper( 'test', 'setting mod' );
-            $tpl_info->{'mod'} = $mod
-        }
-    }
-    return $ret;
+    return App::Core::Template::Default::sub_tpl( @_ );
 }
 
 # Run the template given a hash of data variables
@@ -155,7 +78,6 @@ sub sub_tpl {
 sub run {
     my ( $core, $self ) = @_;
     return 0 if( !$self->{'vars'} );
-    #$Data::Dumper::Maxdepth = 2;
     
     my $vars = $self->{'vars'};
     $vars->{'core'} = \$core;
@@ -193,7 +115,7 @@ sub run {
                 $sub_info->{'ob'} = $sub_tpl = $tple->start( name => $sub_name );
             }
             else {
-                $sub_info->{'ob'} = $sub_tpl = $tple->start( name => $sub_name );
+                $sub_info->{'ob'} = $sub_tpl = $tple->dummy( name => $sub_name );
             }
             
             if( $sub_info->{'mod'} ) {
@@ -211,23 +133,14 @@ sub run {
         $vars->{'tpl'} = $subob;
     }
     
-    my $log = $core->get_mod('log');
     if( $self->{'mod_to_use'} ) {
         my $mod = $self->{'mod_to_use'};
-        #$core->dumper( 'mod', $mod );
-        my $class = $mod->{'obj'}{'_class'};
         $vars->{'m'} = \$mod;
-        #$log->note( text => "Using package $class");
-        return $src->{'tpl'}->fill_in( HASH => $vars, PACKAGE => $class );
+        return $mod->render( vars => $vars );
     }
     else {
-        return $src->{'tpl'}->fill_in( HASH => $vars );
+        return '';
     }
-    # request needs to be passed into this, in order to grab the request version of the module that the context runs in
-    #   without having this, any functions run within the template would not be able to check permissions based on the logged in user
-    
-    # It seems like it would be nice to be able to grab a static version of a module and then reject a request into it for usage; eg to create a request
-    #   version of something on the fly.
 }
 
 1;

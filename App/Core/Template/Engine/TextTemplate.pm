@@ -56,6 +56,7 @@ sub init {
     
     my $app = $core->get_app();
     $app->register_class( name => 'tpl', file => 'App::Core::Template::Default' ); 
+    $app->register_class( name => 'dummy', file => 'App::Core::Template::Dummy' ); 
     
     $self->{'tpls'} = {};
     if( @$tpls ) {
@@ -94,20 +95,30 @@ sub load_xml { # load a template from it's xml definition
     if( $tpls->{ $name } ) {
         return $tpls->{ $name };
     }
-    if( !$xml->{'file'} ) { 
-        return $self->get( name => $name ); 
+    my $file;
+    if( !$xml->{'file'} ) {
+        if( $xml->{'code'} ) {
+            $file = 0;
+        }
+        else {
+            return $self->get( name => $name );
+        }
+    }
+    else {
+        $file = xval $xml->{'file'};
     }
     
     # instantiate a template object and return it
-    my $file = xval $xml->{'file'};
     
     my $log = $core->get_mod('log');
     $log->note( text => "Loaded template $name from file $file" );
     
-    my $tpl = $tpls->{ $name } = $core->create( 'tpl', file => $file, modulerefs => $self->{'modrefs'} );
-    #App::Core::Template::Default->new( file => $file, modulerefs => $self->{'modrefs'} );
-    
-    return $tpl;
+    if( $file ) {
+        return $tpls->{ $name } = $core->create( 'tpl', file => $file, modulerefs => $self->{'modrefs'} );
+    }
+    else {
+        return $tpls->{ $name } = $core->create( 'dummy', modulerefs => $self->{'modrefs'} );
+    }
 }
 
 sub load { # given a short name and a path load a template
@@ -139,6 +150,16 @@ sub run_map {
         $ltpls->{ $alias } = $tpls->{ $tpl };
     }
     #$core->dumper( 'tpls', $tpls,1 );
+}
+
+sub alias {
+    my ( $core, $self) = @_;
+    my $alias = $core->get('alias');
+    my $tpl = $core->get('tpl');
+    my $tpls = $self->{'src'}{'tpls'};
+    my $ltpls = $self->{'tpls'};
+    
+    $ltpls->{ $alias } = $tpls->{ $tpl };
 }
 
 sub run {
