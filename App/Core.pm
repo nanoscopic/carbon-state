@@ -93,7 +93,7 @@ sub requestify {
     my ( $a, $virt, $ob, $r ) = @_;
     $r ||= $virt->{'r'};
     
-    my $dup = $ob->_duplicate( r => $r, _extend => $virt->{'_extend'} );
+    my $dup = $ob->_duplicate( r => $r, _extend => $ob->{'_extend'} );
     if( $dup->_hasfunc('init_request') ) {
         $dup->init_request();
     }
@@ -135,6 +135,21 @@ sub INT_handler {
     exit;
 }
 
+sub register_class {
+    my ( $core, $app ) = @_;
+    my $name = $core->get('name');
+    my $file = $core->get('file');
+    my $glob = $app->{'obj'}{'_glob'};
+    my $classhash = $glob->{'classinfo'};
+    $classhash->{ $name } = {
+        file => $file, 
+        xml => { 
+            name => { value => $name }, 
+            file => { value => $file }
+        }
+    };
+}
+
 sub run {
     my ( $core, $app ) = @_;
     
@@ -168,7 +183,8 @@ sub run {
     
     my $glob = $app->{'obj'}{'_glob'};
     
-    my $classhash = $glob->{'classinfo'} = {};
+    $glob->{'classinfo'} ||= {};
+    my $classhash = $glob->{'classinfo'};
     my $classes = forcearray( $xml->{'class'} );
     if( @$classes ) {
         for my $class ( @$classes ) {
@@ -205,7 +221,7 @@ sub run {
         
     $glob->{'create'} = \&create_test;
     
-    my $modhash = $app->{'modhash'} = {};
+    my $modhash = $app->{'obj'}{'modhash'} = {};
     
     my %order_by_name;
     my %mod_by_order;
@@ -330,7 +346,7 @@ sub get_base {
 
 sub end {
     my ( $core, $app ) = @_;
-    my $modhash = $app->{'modhash'};
+    my $modhash = $app->{'obj'}{'modhash'};
     for my $modname ( keys %$modhash ) {
         my $mod = $modhash->{ $modname };
         my $map = $mod->{'obj'}{'_map'};
@@ -344,7 +360,7 @@ sub get_mod {
     my $modname = $core->get('mod');
     my $req = $core->get('req');
     
-    my $mod = $app->{'modhash'}{ $modname };
+    my $mod = $app->{'obj'}{'modhash'}{ $modname };
     return $mod if( $mod );
     
     if( defined( $req ) && $req == 0 ) {
@@ -359,7 +375,7 @@ sub run_mode {
     my $mode = $core->get('mode');
     my $init = $mode->{'init'};
     my $calls = forcearray( $init->{'call'} );
-    my $mods = $app->{'modhash'};
+    my $mods = $app->{'obj'}{'modhash'};
     
     my %datahash;
     for my $call ( @$calls ) {
@@ -568,7 +584,7 @@ sub call_func {
     my ( $app, $call, $func, $xml ) = @_;
     my $mod = xval $call->{'mod'};
     my $port = xval $call->{'port'};
-    my $rpc = $app->{'modhash'}{'rpc'};
+    my $rpc = $app->{'obj'}{'modhash'}{'rpc'};
     $rpc->call( xml => $xml, mod => $mod, func => $func );
 }
 
@@ -577,7 +593,7 @@ sub check {
     my $obj = $virt->{'obj'};
     my $cls = $obj->{'_class'};
     my $glob = $obj->{'_glob'};
-    $glob->{'log'}->note( text => "Function call - $cls\::$func" );
+    $glob->{'log'}->noter( text => "Function call - $cls\::$func", r => $virt->{'r'} );
     my $spec = $core->{'_funcspec'};
     if( $spec->{'perms'} && $virt->{'r'} ) {
         my $user_perms = $virt->{'r'}{'perms'};

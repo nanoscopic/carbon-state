@@ -59,7 +59,7 @@ sub parse {
         if( $rawcookie =~ m/^([A-Z_]+)=(.+)/ ) {
             my $name = $1;
             my $cookie = { name => $name, content => decode( uri_unescape( $2 ) ) };
-            $log->note( text =>  "Found cookie named $name" );
+            #$log->note( text =>  "Found cookie named $name" );
             $byname->{ $name } = $cookie;
         }
         elsif( $rawcookie =~ m/^([A-Z_]+)=/ ) {

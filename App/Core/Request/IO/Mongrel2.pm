@@ -81,7 +81,7 @@ sub run {
     my ( $core, $self ) = @_;
     
     my $app = $core->get_app();
-    $self->{'request_man'} = $app->get_mod( mod => 'request_man' );
+    #$self->{'request_man'} = $app->get_mod( mod => 'request_man' );
     my $log = $self->{'log'} = $app->get_mod( mod => 'log' );
     my $conf = $self->{'_xml'};
     my $threads = xval $conf->{'threads'}, 2;
@@ -91,7 +91,7 @@ sub run {
     
     $log->note( text => "Spawning $threads thread(s) to handle incoming requests" );
     for( my $i=0;$i<$threads;$i++ ) {
-        threads->create( \&server, $self, $i );
+        threads->create( \&server, $core, $self, $i );
     }
 }
 
@@ -100,7 +100,10 @@ my %tids :shared;
 my %servers;
 
 sub server {
-    my ( $self, $sid ) = @_;
+    my ( $core, $self, $sid ) = @_;
+    
+    my $app = $core->get_app();
+    $self->{'request_man'} = $app->get_mod( mod => 'request_man' );
     
     #print "Start session hash:".$session_hash."\n";
     
@@ -235,16 +238,15 @@ sub handle_request {
         }
     }
     
-    $log->note( text => "Recieved request to $path");
-            
     #print "Data:$data\n";
     my $hash = decode_tnetstrings( $data );
     
     my $queryhash = 0;
+    #print Dumper( $hash );
     if( $hash && $hash->{'QUERY'} ) {
         my $query = $hash->{'QUERY'};
         my $uri = new URI::Simple( "http://test.com/?$query" );
-        $queryhash = $uri->{'query'};
+        $queryhash = { %{ $uri->{'query'} } };
     }
     
     my $content_type = $hash->{'content-type'};
@@ -302,9 +304,13 @@ sub handle_request {
         query => $queryhash,
         #post => $post,
         postvars => $postvars,
+        id => $id,
         ip => $hash->{'x-forwarded-for'},
         type => $type
         );
+    $log->{'r'} = $r;
+    
+    $log->note( text => "Recieved request to $path");
     
     my $cookieman = $r->get_mod( mod => 'cookie_man' );
     #$cookieman = $cookieman->{'src'};
@@ -381,6 +387,13 @@ sub handle_request {
     }
     
     $r->end();
+    
+    my $rlen = $r->{'end'} - $r->{'start'};
+    $rlen *= 100000;
+    $rlen = int( $rlen );
+    $rlen /= 100;
+    
+    $log->note( text => "Request finished; len=${rlen}ms" );
 }
 
 sub process_postfile {

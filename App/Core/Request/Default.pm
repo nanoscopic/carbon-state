@@ -30,6 +30,11 @@ use Carp;
 use strict;
 use vars qw/$VERSION/;
 use Data::Dumper;
+use threads::shared;
+use Time::HiRes qw/time/;
+
+my $urid :shared;
+
 $VERSION = "0.02";
 
 our $spec;
@@ -38,20 +43,35 @@ DONE
 
 sub init {
     my ( $core, $r ) = @_;
-    my $app = $r->{'app'};
-    my $modhash = $app->{'modhash'};
-    my %rmods;
-    for my $modname ( keys %$modhash ) {
-        my $mod = $modhash->{ $modname };
-        my $dup = $mod->_duplicate( r => $r, _extend => $mod->{'_extend'} );
-        if( $dup->_hasfunc('init_request') ) {
-            $dup->init_request();
-        }
-        $rmods{$modname} = $dup;
+    {
+        lock $urid;
+        $urid++;
     }
+    my $app = $r->{'app'};
+    my $modhash = $app->{'obj'}{'modhash'};
+    my %rmods;
     $r->{'mods'} = \%rmods;
     $r->{'body'} = '';
     $r->{'otype'} = '';
+    $r->{'urid'} = $urid;
+    $r->{'start'} = time;
+    
+    for my $modname ( keys %$modhash ) {
+        my $mod = $modhash->{ $modname };
+        my $ref = $mod->{'obj'}{'_class'};
+        
+        my $dup = $mod->_duplicate( r => $r, _extend => $mod->{'_extend'} );
+        
+        $rmods{$modname} = $dup;
+    }
+    
+    for my $modname ( keys %$modhash ) {
+        my $dup = $rmods{$modname};
+        if( $dup->_hasfunc('init_request') ) {
+            $dup->init_request();
+        }
+    }
+    
     #print "Request was init'ed\n";
 }
 
@@ -70,15 +90,27 @@ sub end {
         }
     }
     undef $r->{'mods'};
+    my $end = $r->{'end'} = time;
+    
     #print "Request was ended\n";
 }
 
 sub get_mod {
     my ( $core, $r ) = @_;
     #my $glob = $app->{'_glob'};
+    
     my $modname = $core->get('mod');
+    
+    #return $core->get_mod( $modname );
     #print "Attempting to get mod $modname\n";
-    return $r->{'mods'}{ $modname } || confess( "Cannot find mod $modname\n" );
+    my $mod = $r->{'mods'}{ $modname };
+    if( !defined $mod ) {
+        #$core->dumper( 'modname', $modname );
+        #$core->dumper( 'mod', $mod, 3 );
+        #$core->dumper( 'mods', $r->{'mods'}, 1 );
+        confess( "Cannot find mod $modname\n" );
+    }
+    return $mod;
 }
 
 sub content_type_as_header {

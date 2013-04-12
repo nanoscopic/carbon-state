@@ -29,36 +29,28 @@ use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
 use App::Core::Request::Default 0.01;
+use Date::Format;
 $VERSION = "0.02";
 
 sub init {
     my ( $core, $self ) = @_;
-    #my $app = $core->get('app');
-    #$self->{'app'};
+    my $app = $core->get_app();
+    $app->register_class( name => 'req', file => 'App::Core::Request::Default' ); 
 }
+
+my $rid = 0;
 
 sub new_request {
     my ( $core, $manager ) = @_;
-    my $app = $core->get_app();
-    my $path = $core->get( 'path' );
-    # query post cookies
-    my $query = $core->get('query');
-    my $post = $core->get('post');
-    my $cookies = $core->get('cookies');
-    my $ip = $core->get('ip');
-    my $postvars = $core->get('postvars');
-    my $type = $core->get('type');
-    #print Dumper( $cookies );
+        
+    my $v = $core->get_all(); # path,query,post,cookies,up,postvars,type, more?
+    $v->{'app'} = $core->get_app();
     
-    my $req = App::Core::Request::Default->new( 
-        app => $app,
-        path => $path,
-        query => $query,
-        post => $post,
-        cookies => $cookies,
-        ip => $ip,
-        postvars => $postvars,
-        type => $type );
+    $rid++;
+    my $now = time2str('%X', time);
+    $v->{'id'} = $v->{'id'}. '.' . $rid . '.' . $now;
+    my $req = $core->create( 'req', %$v );
+    $req->{'r'} = $req;
     
     $req->init();
     

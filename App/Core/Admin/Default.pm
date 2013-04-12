@@ -47,8 +47,10 @@ sub init {
     my ( $core, $self ) = @_; # this self is src
     my $conf = $self->{'conf'} = $core->get('conf');
     my $router = $core->get_mod( 'web_router' );
-    $router->route_path( path => "login", obj => 'core_admin', func => 'login', session => 'CORE' );
-    $router->route_path( path => "admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'login' );
+    $router->route_path( path => "core/login", obj => 'core_admin', func => 'login', session => 'CORE' );
+    $router->route_path( path => "core/admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'core/login' );
+    $router->route_path( path => "core/log", obj => 'core_admin', func => 'log', session => 'CORE', bounce => 'core/login' );
+    $router->route_path( path => "log", obj => 'core_admin', func => 'log', session => 'CORE' );
     $self->{'base'} = xval( $core->get_conf()->{'base'} );
     
     #my $api = $core->get_mod( 'core_api' );
@@ -60,14 +62,60 @@ sub init {
 sub admin {
     my ( $core, $self ) = @_;
     #$core->set('html', 'test' );
+    my $base = $core->get_base();
     my $dump = Dumper( $self->{'r'}{'perms'} );
     $self->{'r'}->out( text => "
         <h2>App::Core Admin</h2>
         <ul>
-        <li>test
+        <li><a href='/$base/core/log'>log</a>
         </ul>
         $dump
         " );
+}
+
+sub log {
+    my ( $core, $self ) = @_;
+    my $log = $core->get_mod( 'log' );
+    my $items = $log->get_items();
+    #my $dump = Dumper( $items );
+    my @obs;
+    my $out;
+    
+    my $r = $self->{'r'};
+    my $q = $r->{'query'};
+    my $nocore = 0;
+    if( $q && $q->{'nocore'} ) {
+        $nocore = 1;
+    }
+    
+    if( !$nocore ) {
+        $out .= "<a href='?nocore=1'>hide core logs</a><br>";
+    }
+    else {
+        $out .= "<a href='?'>show core logs</a><br>";
+    }
+    $out .= "
+    <table cellpadding=3 border=1 cellspacing=0>";
+    my $len = $#$items;
+    
+    
+    
+    for( my $i=$len;$i>=0;$i-- ) {
+        my $item = $items->[ $i ];
+        my ( $ob, $xml ) = XML::Bare->new( text => $item );
+        $xml = App::Core::simplify( $xml );
+        my $type = $xml->{'type'} || '';
+        my $text = $xml->{'text'} || '';
+        my $time = $xml->{'time'} || '';
+        my $rid = $xml->{'rid'} || '';
+        my $tid = $xml->{'tid'};
+        my $trace = $xml->{'trace'} || '';
+        $trace =~ s/,/<br>/g;
+        if( $nocore && $trace =~ m|^App/Core| ) { next; }
+        $out .= "<tr><td>$type</td><td>$text</td><td>$time</td><td>$rid</td><td>$trace</td><td>$tid</td></tr>";
+    }
+    $out .= "</table>";
+    $self->{'r'}->out( text => $out );
 }
 
 sub login {
@@ -109,12 +157,12 @@ sub login {
             #print Dumper( $cookie );
             $cookieman->add( cookie => $cookie );
             
-            $r->redirect( url => "admin" );
+            $r->redirect( url => "core/admin" );
         }
     }
     
     $r->out( text => "
-    <form method='post' enctype='multipart/form-data' action='/$base/login/?postid=10'>
+    <form method='post' enctype='multipart/form-data' action='/$base/core/login/?postid=10'>
     <table>
         <tr>
             <td>User</td>

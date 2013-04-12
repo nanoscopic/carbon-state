@@ -54,12 +54,17 @@ sub init {
     #my $log = $core->get_mod('log');
     #$core->dumperx( 'tpls', $tpls );
     
+    my $app = $core->get_app();
+    $app->register_class( name => 'tpl', file => 'App::Core::Template::Default' ); 
+    
     $self->{'tpls'} = {};
     if( @$tpls ) {
         for my $tpl ( @$tpls ) {
             $self->load_xml( xml => $tpl );
         }
     }
+    
+    
     
 }
 
@@ -99,7 +104,8 @@ sub load_xml { # load a template from it's xml definition
     my $log = $core->get_mod('log');
     $log->note( text => "Loaded template $name from file $file" );
     
-    my $tpl = $tpls->{ $name } = App::Core::Template::Default->new( file => $file, modulerefs => $self->{'modrefs'} );
+    my $tpl = $tpls->{ $name } = $core->create( 'tpl', file => $file, modulerefs => $self->{'modrefs'} );
+    #App::Core::Template::Default->new( file => $file, modulerefs => $self->{'modrefs'} );
     
     return $tpl;
 }

@@ -44,6 +44,11 @@ sub construct {
     my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a app::core module name or a reference to a class::core object
     #$self->{'src'} = App::Core::slurp( $self->{'file'} );
     $self->{'tpl'} = Text::Template->new( TYPE => 'FILE', SOURCE => $self->{'file'} );
+    if( !$self->{'tpl'} ) {
+        my $log = $core->get_mod('log');
+        my $terr = $Text::Template::ERROR;
+        $log->error( text => "Template error - file $self->{'file'} - $terr" );
+    }
     # modulerefs is set within self already
 }
 
@@ -57,12 +62,8 @@ sub init_request {
 sub set_vars {
     my ( $core, $self ) = @_;
     my $vars = $core->get('vars');
-    if( $self->{'vars'} ) {
-        App::Core::mux( $self->{'vars'}, $vars );
-    }
-    else {    
-        $self->{'vars'} = $vars;
-    }
+    $self->{'vars'} ||= {};
+    App::Core::mux( $self->{'vars'}, $vars );
 }
 
 # This function should not be called outside of this module
@@ -76,15 +77,17 @@ sub set_subhash {
 # This function creates a tree hash that contains subtemplates and the variables associated with them
 # This information needs to be used automatically by the 'run' function to pass the results of the
 #   templates being run into the templates being evaluated.
-sub tpl_vars {
+sub sub_tpl {
     my ( $core, $self ) = @_;
     my $tpl = $core->get('tpl');
-    my $vars = $core->get('vars');
+    my $vars = $core->get('vars') || {};
     my $mod = $core->get('mod');
     my $tpls = $self->{'tpls'};
     
-    # $core->dumper('mod',$mod);
+    $self->{'vars'} ||= {};
     
+    # $core->dumper('mod',$mod);
+    my $ret = 0;
     if( $tpl =~ m/\./ ) {
         my @parts = split(/\./, $tpl );
         my $start_tpl_name = $parts[0];
@@ -102,7 +105,9 @@ sub tpl_vars {
             my $sub_name = shift @parts;
             my $sub_info = $subs->{ $sub_name };
             if( !$sub_info ) {
-                $sub_info = $subs->{ $sub_name } = { name => $sub_name };
+                my $tple = $core->get_mod('tpl_engine');
+                $ret = $tple->start( name => $sub_name );
+                $sub_info = $subs->{ $sub_name } = { name => $sub_name, tpl => $ret };
             }
             if( $i == $len ) { # set the vars here
                 if( $sub_info->{'vars'} ) {
@@ -115,6 +120,8 @@ sub tpl_vars {
                     #$core->dumper( 'test', 'setting mod' );
                     $sub_info->{'mod'} = $mod
                 }
+                
+                
             }
             $cur_info = $sub_info;
         }
@@ -123,6 +130,8 @@ sub tpl_vars {
         my $tpl_info = $tpls->{ $tpl };
         if( !$tpl_info ) {
             $tpls->{ $tpl } = $tpl_info = { name => $tpl, vars => $vars };
+            my $tple = $core->get_mod('tpl_engine');
+            $ret = $tpl_info->{'tpl'} = $tple->start( name => $tpl );
         }
         else {
             App::Core::mux( $tpl_info->{'vars'}, $vars );
@@ -132,6 +141,7 @@ sub tpl_vars {
             $tpl_info->{'mod'} = $mod
         }
     }
+    return $ret;
 }
 
 # Run the template given a hash of data variables
@@ -143,6 +153,8 @@ sub run {
     
     my $vars = $self->{'vars'};
     $vars->{'core'} = \$core;
+    $vars->{'t'} = \$self;
+    if( !$vars->{'base'} ) { $vars->{'base'} = $core->get_base(); }
     my $src = $self->{'src'};
     my $modrefs = $src->{'modulerefs'};
     if( %$modrefs ) {
@@ -153,14 +165,27 @@ sub run {
         }
     }
     
+    if( $self->{'mod_to_use'} ) {
+        my $mod = $self->{'mod_to_use'};
+        if( $mod->_hasfunc( 'init_tpl' ) ) {
+            $mod->init_tpl( $self );
+        }
+    }
+    
     my $tpls = $self->{'tpls'};
     if( $tpls && %$tpls ) { # have we defined any sub-templates
         #$core->dumper( 'tpls', $tpls );
         my $subob = {};
         my $tple = $core->get_mod('tpl_engine');
         for my $sub_name ( keys %$tpls ) {
-            my $sub_tpl = $tple->start( name => $sub_name );
             my $sub_info = $tpls->{ $sub_name };
+            my $sub_tpl;
+            if( $sub_info->{'ob'} ) {
+                $sub_tpl = $sub_info->{'ob'};
+            }
+            else {
+                $sub_info->{'ob'} = $sub_tpl = $tple->start( name => $sub_name );
+            }
             
             if( $sub_info->{'mod'} ) {
                 my $mod = $core->get_mod( $sub_info->{'mod'} );
@@ -182,7 +207,7 @@ sub run {
         my $mod = $self->{'mod_to_use'};
         #$core->dumper( 'mod', $mod );
         my $class = $mod->{'obj'}{'_class'};
-        $vars->{'m'} = $mod;
+        $vars->{'m'} = \$mod;
         #$log->note( text => "Using package $class");
         return $src->{'tpl'}->fill_in( HASH => $vars, PACKAGE => $class );
     }

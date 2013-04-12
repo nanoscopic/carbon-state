@@ -231,8 +231,9 @@ sub get_source {
 
 sub _hasfunc {
     my ( $ob, $tocall ) = @_;
-    my $spec = $ob->{'obj'}{'_spec'};
-    return $spec->{'funcs'}{ $tocall };
+    #my $spec = $ob->{'obj'}{'_spec'};
+    #return $spec->{'funcs'}{ $tocall };
+    return $ob->{'obj'}{'_map'}{ $tocall };
 }
 
 sub _checkspec {

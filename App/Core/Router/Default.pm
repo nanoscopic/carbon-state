@@ -115,7 +115,7 @@ sub route {
     my $tple = 0;
     while( @parts ) {
         my $joined = join('/', @parts );
-        $log->note( text => "Testing $joined" );
+        #$log->note( text => "Testing $joined" );
         my $info;
         if( $info = $rs->{ $joined } ) {
             my $objname      = $info->{'obj'};
@@ -157,8 +157,11 @@ sub route {
             #$core->dumper( 'extra', $extra );
             if( %$extra && $extra->{'tpls'} ) {
                 $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
-                $tpl->{'mod_to_use'} = $obj;
                 my $conf = $extra->{'conf'};
+                my $atpl = $conf->{'tpl'};
+                
+                $tpl->{'mod_to_use'} = $atpl->{'mod'} ? $core->get_mod( $atpl->{'mod'} ) : $obj;
+                
                 my $map = $conf->{'map'};
                 if( $map ) {
                     $tple = $core->get_mod('tpl_engine');
