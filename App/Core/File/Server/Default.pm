@@ -109,8 +109,9 @@ sub handle_file_req {
         $log->note( text => "after from removal: $url" );
     
         my $ctype = "text/html";
+        my $ext = '';
         if( $url =~ m/\.([a-z]+)$/ ) {
-            my $ext = $1;
+            $ext = $1;
             my $types = $src->{'exthash'};
             $ctype = $types->{ $ext } || 'text/html';
         }
@@ -126,7 +127,12 @@ sub handle_file_req {
             $r->{'body'} = $data;
         }
         else {
-            $r->out( text => "File does not exist $file" );
+            if( $ext eq 'js' ) {
+                $r->out( text => "alert('File does not exist $file');" );
+            }
+            else {
+                $r->out( text => "File does not exist $file" );
+            }
         }
         
     }

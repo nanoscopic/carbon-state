@@ -75,6 +75,22 @@ sub init {
     #print "Request was init'ed\n";
 }
 
+sub log_start {
+    my ( $core, $r ) = @_;
+    my $url = $core->get('url');
+    my $session_id = $core->get('sid'); # randomized session key fetched when a valid request comes in
+    my $log = $r->{'log'} = $core->get_mod('log');
+    my $dbid = $log->start_request( req_num => $r->{'urid'}, url => $url, cookie_id => $session_id );
+    $r->{'dbid'} = $dbid;
+}
+
+sub log_end {
+    my ( $core, $r ) = @_;
+    my $dbid = $r->{'dbid'};
+    my $log = $r->{'log'};
+    $log->end_request( rid => $dbid );
+}
+
 sub out {
     my ( $core, $r ) = @_;
     $r->{'body'} .= $core->get('text');

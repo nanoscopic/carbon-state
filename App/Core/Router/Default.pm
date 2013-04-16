@@ -136,6 +136,7 @@ sub route {
             my $session      = $sman->get_session( r => $r, cookie => $session_name );
             
             if( $session ) {
+                $r->log_start( sid => $session->{'session_id'} );
                 my $cookieman = $r->get_mod( mod => 'cookie_man' );
                 my $cookie = $cookieman->extend( cookie => $session_name, len => [ 1, 0, 0, 0 ] );
                 my $date = $cookie->{'expires'};
@@ -143,10 +144,13 @@ sub route {
                 $session->show();
                 $r->set_permissions( perms => $perm->user_get_permissions( user => $session->get_user() ) );
             }
-            if( $bounce && !$session ) {
-                $log->note( text =>  "Bounce to $bounce" );
-                $r->redirect( url => $bounce );
-                return;
+            else {
+                if( $bounce ) {
+                    $log->note( text =>  "Bounce to $bounce" );
+                    $r->redirect( url => $bounce );
+                    return;
+                }
+                $r->log_start( sid => 'none', url => $opath );
             }
             
             if( $full && $info->{'folder'} && $opath !~ m|/$| ) {

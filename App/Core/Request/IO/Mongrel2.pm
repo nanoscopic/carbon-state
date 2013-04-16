@@ -103,6 +103,7 @@ sub server {
     my ( $core, $self, $sid ) = @_;
     
     my $app = $core->get_app();
+    
     $self->{'request_man'} = $app->get_mod( mod => 'request_man' );
     
     #print "Start session hash:".$session_hash."\n";
@@ -111,6 +112,7 @@ sub server {
     
     my $thr = threads->self();
     my $tid = $thr->tid();
+    $app->init_threads( tid => $tid );    
     {
         lock %tids;
         $tids{ $tid } = $sid;
@@ -120,7 +122,8 @@ sub server {
     $self->{'id'} = $sid;
     #my $app = $self->{'obj'}{'_app'};
     
-    my $log = $self->{'log'};
+    my $log = $self->{'log'}; # this is a thread specific copy of the log module due to the way perl threading works
+        
     my $sman = $self->{'session_man'};
     
     #$sman->{'sessions'} = $session_hash;

@@ -70,7 +70,7 @@ sub get_session {
         #print Dumper( $content );
         my $sid;
         if( $sid = $content->{'session_id'} ) {
-            $id = $sid;
+            $id = $self->{'session_id'} = $sid;
         }
     }
     else {

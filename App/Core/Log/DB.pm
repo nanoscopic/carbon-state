@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Log::Default - App::Core Component
+App::Core::Log::DB - App::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Log::Default - App::Core Component
 
 =cut
 
-package App::Core::Log::Default;
+package App::Core::Log::DB;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Term::ANSIColor qw/:constants color/;
@@ -32,6 +32,7 @@ use vars qw/$VERSION/;
 use threads::shared;
 use Time::HiRes qw/time/;
 use threads;
+use DBI;
 my @items :shared;
 
 $VERSION = "0.02";
@@ -44,6 +45,16 @@ sub init {
         eval('use Win32::Console::ANSI;');
     }
     print "Logging to console\n" if( $console );
+    
+    my $database = $self->{'db_name'} = "ais_core";
+    my $host     = $self->{'db_host'} = "172.22.27.152";
+    my $port     = $self->{'db_port'} = 3306;
+    my $dsn      = $self->{'dsn'}     = "DBI:mysql:database=$database;host=$host;port=$port";
+    my $db_user  = $self->{'db_user'} = "ais_core";
+    my $db_pw    = $self->{'db_pw'}   = "c0repass";
+    my $dbh      = $self->{'dbh'}     = DBI->connect( $dsn, $db_user, $db_pw );
+    
+    # connect to the db and store dbh in self->dbh
 }
 
 # thread started
@@ -52,19 +63,70 @@ sub init {
 # request started
 # request ended
 
-sub server_start {}
-sub server_stop {}
-sub start_request {}
-sub stop_request {}
+sub init_thread {
+    my ( $core, $self ) = @_;
+    my $tid = $core->get('tid');
+    my $inst_id = $self->{'inst_id'};
+    # set dbh to a new connection to the db since the global one should not be used?? for now just try and reuse the same connection :(
+    my $dsn = $self->{'dsn'};
+    my $dbh = $self->{'dbh'} = DBI->connect( $dsn, $self->{'db_user'}, $self->{'db_pw'} );
+    $dbh->do('insert into thread set server_inst_id=?,tid=?',undef, $inst_id, $tid );
+    $self->{'trow'} = $dbh->{'mysql_insertid'};
+}
+
+sub server_start {
+    my ( $core, $self ) = @_;
+    
+    my $dbh = $self->{'dbh'};
+    $dbh->do('insert into server_inst set started=NOW(), num_threads=3' );
+    my $inst_id = $self->{'inst_id'} = $dbh->{'mysql_insertid'};
+    return $inst_id;
+}
+
+sub server_stop {
+    my ( $core, $self ) = @_;
+    
+    my $sid = $self->{'inst_id'};
+    my $dbh = $self->{'dbh'};
+    $dbh->do('update server_inst set ended=NOW() where id=?',undef, $sid );
+}
+
+sub start_request {
+    my ( $core, $self ) = @_;
+    
+    my $req_num = $core->get('req_num');
+    my $url = $core->get('url');
+    my $cookie_id = $core->get('cookie_id');
+        
+    my $src = $self->{'src'};
+    
+    my $r = $self->{'r'};
+    
+    my $dbh = $src->{'dbh'};
+    my $inst_id = $src->{'inst_id'};
+    my $trow = $src->{'trow'};
+    $dbh->do('insert into request set req_num=?,url=?,cookie_id=?,start=NOW(),server_inst_id=?,thread_id=?', undef, $req_num, $url, $cookie_id, $inst_id, $trow );
+    my $rid = $dbh->{'mysql_insertid'};
+    return $rid;
+}
+
+sub stop_request {
+    my ( $core, $self ) = @_;
+    my $dbid = $core->get('rid');
+    my $dbh = $self->{'dbh'};
+    $dbh->do('update request set end=NOW() where id=?',undef,$dbid );
+}
 
 sub note {
     my ( $core, $self ) = @_;
     my $src = $self->{'src'} || $self;
     my $text = $core->get('text');
     my $msg = "note: $text\n";
-    my $rid = '';
+    my $rnum = '';
+    my $rid = 0;
     if( $self->{'r'} ) {
-        $rid = $self->{'r'}{'urid'};
+        $rnum = $self->{'r'}{'urid'};
+        $rid = $src->{'dbid'};
     }
     
     my @cl = ( 1,2,3 );#, 2, 3, 4, 5, 6, 7 );
@@ -79,12 +141,18 @@ sub note {
     }
     
     my $now = time; $now *= 1000; $now = int( $now ); $now /= 1000;
-    my $raw = Class::Core::_hash2xml( { type => 'note', text => $text, time => $now, rid => $rid, trace => $trace, tid => threads->tid() } );
-    {
-        lock( @items );
-        if( $#items > 500 ) { shift @items; }
-        push( @items, $raw );
-    }
+    
+    #my $raw = Class::Core::_hash2xml( { type => 'note', text => $text, time => $now, rid => $rid, trace => $trace, tid => threads->tid() } );
+    #{
+    #    lock( @items );
+    #    if( $#items > 500 ) { shift @items; }
+    #    push( @items, $raw );
+    #}
+    
+    
+    my $dbh = $src->{'dbh'};
+    $dbh->do('insert into log set stamp=NOW(),type=0,msg=?,trace=?,req_id=?',undef, $text, $trace, $rid );
+    
     print STDERR $msg if( $src->{'console'} );
 }
 
@@ -93,10 +161,12 @@ sub noter {
     my $src = $self->{'src'} || $self;
     my $text = $core->get('text');
     my $msg = "note: $text\n";
-    my $rid = '';
+    my $rnum = '';
     my $r = $core->get('r');
+    my $rid = 0;
     if( $r ) {
-        $rid = $r->{'urid'};
+        $rnum = $r->{'urid'};
+        $rid = $r->{'dbid'};
     }
     
     my @cl = ( 1,2,3 );#, 2, 3, 4, 5, 6, 7 );
@@ -110,13 +180,18 @@ sub noter {
         $trace .= "$file:$line,";
     }
     
-    my $now = time; $now *= 1000; $now = int( $now ); $now /= 1000;
-    my $raw = Class::Core::_hash2xml( { type => 'note', text => $text, time => $now, rid => $rid, trace => $trace, tid => threads->tid() } );
-    {
-        lock( @items );
-        if( $#items > 500 ) { shift @items; }
-        push( @items, $raw );
-    }
+    #my $now = time; $now *= 1000; $now = int( $now ); $now /= 1000;
+    #my $raw = Class::Core::_hash2xml( { type => 'note', text => $text, time => $now, rid => $rid, trace => $trace, tid => threads->tid() } );
+    #{
+    #    lock( @items );
+    #    if( $#items > 500 ) { shift @items; }
+    #    push( @items, $raw );
+    #}
+    #my $rid = $src->{'rid'};
+    
+    my $dbh = $src->{'dbh'};
+    $dbh->do('insert into log set stamp=NOW(),type=0,msg=?,trace=?,req_id=?',undef, $text, $trace, $rid );
+    
     print STDERR $msg if( $src->{'console'} );
 }
 

@@ -64,9 +64,6 @@ sub init {
             $self->load_xml( xml => $tpl );
         }
     }
-    
-    
-    
 }
 
 sub init_request {

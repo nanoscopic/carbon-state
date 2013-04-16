@@ -150,6 +150,23 @@ sub register_class {
     };
 }
 
+sub init_threads {
+    my ( $core, $app ) = @_;
+    
+    my $tid = $core->get('tid');
+    
+    my $modhash = $app->{'obj'}{'modhash'};
+    
+    for my $modname ( keys %$modhash ) {
+        my $mod = $modhash->{ $modname };
+        if( $mod->_hasfunc('init_thread') ) {
+            $mod->init_thread( tid => $tid );
+        }
+    }
+}
+
+my %used_mods;
+
 sub run {
     my ( $core, $app ) = @_;
     
@@ -304,6 +321,8 @@ sub run {
         
         if( $mod_name eq 'log' ) { 
             $log = $glob->{'log'} = $mod;
+            my $inst_id = $log->server_start();
+            $app->{'inst_id'} = $inst_id;
         }
         $modhash->{ $mod_name } = $mod;
         if( $log ) { 
@@ -311,6 +330,20 @@ sub run {
         }
         else {
             print "Loaded $type $mod_name module\n";
+        }
+    }
+    
+    # Log should be loaded now; so go ahead and compile classes so we get errors right at the start
+    for my $classname ( keys %$classhash ) {
+        my $info = $classhash->{ $classname };
+        
+        my $file = $info->{'file'};
+    
+        if( !$used_mods{ $file } ) {
+            eval("use $file;");
+            if( $@ ) { # was $! before
+                $log->error( text => "Error loading $file - $@" );
+            }
         }
     }
         
@@ -335,6 +368,8 @@ sub run {
     if( $cur_mode ) {
         $app->run_mode( mode => $cur_mode );
     }
+    
+    $log->server_stop();
     
     return 0;
 }
@@ -450,12 +485,12 @@ sub slurp {
     my $contents;
     open( SLURP_FILE, $filename );
     binmode( SLURP_FILE ); # This line is only needed on Windows Perl, to prevent the file being read in text mode
-    #{
-    #    local $/ = undef; # turns off the line seperator
-    #    $contents = <SLURP_FILE>;
-    #}
-    my $buffer;
-    while( read( SLURP_FILE, $buffer, 10000000 ) and $contents .= $buffer ) {};
+    {
+        local $/ = undef; # turns off the line seperator
+        $contents = <SLURP_FILE>;
+    }
+    #my $buffer;
+    #while( read( SLURP_FILE, $buffer, 1000 ) and $contents .= $buffer ) {};
     close( SLURP_FILE );
     return $contents;
 }
@@ -509,8 +544,6 @@ sub simplify {
     return $node;
 }
 
-my %used_mods;
-
 sub load_module {
     my ( $glob, $info, $app ) = @_;
     my $file = $info->{'file'};
@@ -556,7 +589,10 @@ sub load_class {
     if( !$used_mods{ $file } ) {
         eval("use $file;");
         if( $@ ) { # was $! before
-            return 0;
+            my $log = $core->get_mod('log');
+            $log->error( text => "Error loading $file - $@" );
+            die;
+            #return 0;
         }
     }
     $used_mods{ $file } = 1;
