@@ -135,13 +135,15 @@ sub log {
     if( $q && $q->{'r'} ) {
         $items = $log->get_request_msgs( $q->{'r'} - 1 );  
         $single = 1;
-        
+        my $rinfo = $log->get_request( $q->{'r'} - 1 );
+        my $sdump = Dumper( $rinfo );
+        $out .= "<pre>$sdump</pre><br>";
     }
     else {
         $items = $log->get_items();
     }
     my $first = $items->[ 0 ];
-    $start_time = $first->{'time'};
+    $start_time = $first->{'time'} || 0;
     
     if( !$nocore ) {
         $out .= "<a href='?nocore=1'>hide core logs</a><br>";
@@ -160,7 +162,7 @@ sub log {
         my $xml = $items->[ $i ];
         my $type = $xml->{'type'} || '';
         my $text = $xml->{'text'} || '';
-        my $time = $xml->{'time'} || '';
+        my $time = $xml->{'time'} || 0;
         
         my $dif = 0;
         if( $i ) {

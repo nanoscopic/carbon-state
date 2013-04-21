@@ -610,12 +610,14 @@ sub load_module {
         die "Module does not have a name";
     }
     my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
+    my $calldone = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&checkdone; # Don't do logging of log module or internal modules
     my $call = $info->{'call'};
     my $name = $info->{'name'};
     $info->{'ob'} = $newref->( 
         $file, 
         obj => { 
             _callback => $callback, 
+            _calldone => $calldone,
             _glob     => $glob, 
             _app      => $app,
             _name     => $name
@@ -659,10 +661,12 @@ sub load_class {
     $used_mods{ $file } = 1;
     my $newref = \&{"$file\::new"};
     my $callback = ( $internal ? 0 : \&check ); # Always do logging of class calls
+    my $calldone = ( $internal ? 0 : \&checkdone ); # Always do logging of class calls
     return $newref->( 
         $file, 
         obj => { 
             _callback => $callback, 
+            _calldone => $calldone,
             _glob     => $glob, 
             _app      => $app 
         },
@@ -690,10 +694,10 @@ sub check {
     my $obj = $virt->{'obj'};
     my $cls = $obj->{'_class'};
     my $glob = $obj->{'_glob'};
-    if( !$glob->{'log'} ) {
-        print "aaaFunction call - $cls\::$func";
-    }
-    $glob->{'log'}->noter( text => "Function call - $cls\::$func", r => $virt->{'r'} );
+    
+    #$glob->{'log'}->noter( text => "fin - $cls\::$func", r => $virt->{'r'} );
+    #$virt->{'_callid'} = $glob->{'log'}->func_entry( [ $cls, $func, $virt->{'r'} ] );
+    $virt->{'_callid'} = $glob->{'log'}->func_entry( [ $cls, $func, $virt->{'r'}{'dbid'} ] );
     my $spec = $core->{'_funcspec'};
     if( $spec->{'perms'} && $virt->{'r'} ) {
         my $user_perms = $virt->{'r'}{'perms'};
@@ -706,6 +710,16 @@ sub check {
         }
     }
     return 1;
+}
+
+sub checkdone {
+    my ( $core, $virt, $func, $parms ) = @_;
+    my $obj = $virt->{'obj'};
+    my $cls = $obj->{'_class'};
+    my $glob = $obj->{'_glob'};
+    $glob->{'log'}->func_exit( $virt->{'_callid'} );
+    #$glob->{'log'}->noter( text => "fout - 
+    #$virt->{'_callid'} = $glob->{'log'}->func_exit( [ $cls, $func, $virt->{'r'} ] );
 }
 
 1;

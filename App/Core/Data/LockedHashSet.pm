@@ -216,11 +216,14 @@ sub simplify {
 sub _hash2xml {
     my ( $node, $name ) = @_;
     my $ref = ref( $node );
+    return '' if( $name && $name =~ m/^\_/ );
     my $txt = $name ? "<$name>" : '';
     if( $ref eq 'ARRAY' ) {
+       $txt = '';
        for my $sub ( @$node ) {
            $txt .= _hash2xml( $sub, $name );
        }
+       return $txt;
     }
     elsif( $ref eq 'HASH' ) {
        for my $key ( keys %$node ) {

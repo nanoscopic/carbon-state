@@ -121,6 +121,7 @@ sub server {
     
     $self->{'id'} = $sid;
     #my $app = $self->{'obj'}{'_app'};
+    my $glob = $self->{'obj'}{'_glob'};
     
     my $log = $self->{'log'}; # this is a thread specific copy of the log module due to the way perl threading works
         

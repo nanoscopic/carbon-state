@@ -200,6 +200,7 @@ sub AUTOLOAD {
     my $inner = { parms => \%parms, _funcspec => $fspec, virt => $virt };#_glob => $obj->{'_glob'}, 
     bless $inner, "Class::Core::INNER";
     my $callback = $obj->{'_callback'};
+    my $calldone = $obj->{'_calldone'};
     
     my $okay = 1;
     if( $callback ) {
@@ -221,6 +222,11 @@ sub AUTOLOAD {
             die "While checking return - $err" if( $err );
         }
     }
+    
+    if( $calldone ) {
+        &$calldone( $inner, $virt, $tocall, \%parms );
+    }
+    
     return $inner->{'res'} ? $inner : $inner->{'ret'};
 }
 
@@ -608,11 +614,14 @@ sub new {
 sub _hash2xml {
     my ( $node, $name ) = @_;
     my $ref = ref( $node );
+    return if( $name && $name =~ m/^\_/ );
     my $txt = $name ? "<$name>" : '';
     if( $ref eq 'ARRAY' ) {
+       $txt = '';
        for my $sub ( @$node ) {
            $txt .= _hash2xml( $sub, $name );
        }
+       return $txt;
     }
     elsif( $ref eq 'HASH' ) {
        for my $key ( keys %$node ) {

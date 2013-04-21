@@ -70,12 +70,12 @@ sub init_thread {
     my $inst_id = 0; #$self->{'inst_id'};
     # set dbh to a new connection to the db since the global one should not be used?? for now just try and reuse the same connection :(
     
-    if( $self->{'shared'} ) {
+    #if( $self->{'shared'} ) {
         my $hash_req  = $self->{'hash_req'}  = $core->create( 'hash', id => $self->{'id_req' } );
         my $hash_inst = $self->{'hash_inst'} = $core->create( 'hash', id => $self->{'id_inst'} );
         my $hash_msg  = $self->{'hash_msh'}  = $core->create( 'hash', id => $self->{'id_msg' } );
         my $hash_func = $self->{'hash_func'} = $core->create( 'hash', id => $self->{'id_func'} );
-    }
+    #}
     
     my $hinst = $self->{'hash_inst'};
     return if( !$hinst );
@@ -100,9 +100,63 @@ sub init_request {
 
 sub server_start {}
 sub server_stop {}
+
+sub func_entry {
+    my ( $core, $self, $arr ) = @_;
+    my $src = $self->{'src'} || $self;
+    return if( !$src );
+    my ( $cls, $func, $r ) = @$arr;
+    #$core->dumper( 'test', $self, 4 );
+    my $fhash = $src->{'hash_func'};
+    return if( !$fhash );
+    my $call_id = $fhash->push( {
+        start => time(),
+        class => $cls,
+        func => $func,
+        rid => ( $r ? $r->{'dbid'} : 0 )
+    } );
+    my $glob = $src->{'obj'}{'_app'};
+    
+    my $curfunc = $glob->{'curfunc'};
+    #print $glob->{'root'}."\n";
+    #print $glob->{'curfunc'} . "\n";
+    if( $curfunc ) {
+        my $newfunc = {
+            calls => [], 
+            _parent => $curfunc, 
+            id => $call_id,
+            start => time(),
+            class => $cls,
+            func => $func
+        };
+        push( @{ $curfunc->{'calls'} }, $newfunc );
+        $glob->{'curfunc'} = $newfunc;
+    }
+    
+    #print "*******\n";
+    #print Dumper( $glob->{'root'} );
+    
+    return $call_id;
+}
+
+sub func_exit {
+    my ( $core, $self, $fid ) = @_;
+    my $src = $self->{'src'} || $self;
+    my $fhash = $src->{'hash_func'};
+    return if( !$fhash );
+    my $finfo = $fhash->get( $fid );
+    $finfo->{'end'} = time;
+    $fhash->set( i => $fid, hash => $finfo );
+    my $glob = $src->{'obj'}{'_app'};
+    if( $glob->{'curfunc'} && $glob->{'curfunc'}{'_parent'} ) {
+        $glob->{'curfunc'}{'end'} = time;
+        $glob->{'curfunc'} = $glob->{'curfunc'}{'_parent'};
+    }
+}
+
 sub start_request {
     my ( $core, $self ) = @_;
-    my $src = $self->{'src'};
+    my $src = $self->{'src'} || $self;
     return if( !$src->{'shared'} );
     
     my $req_num = $core->get('req_num');
@@ -124,10 +178,15 @@ sub start_request {
             start => time
     } );
     
+    my $glob = $src->{'obj'}{'_app'};
+    my $stack = $glob->{'root'} = $glob->{'curfunc'} = { calls => [], _parent => 0 };
+    
     return $rid;
 }
+use Data::Dumper;
 sub stop_request {
     my ( $core, $self ) = @_;
+    my $src = $self->{'src'} || $self;
     return if( !$self->{'src'}{'shared'} );
     my $dbid = $core->get('rid');
     my $msgs = $core->get('msgs');
@@ -138,9 +197,19 @@ sub stop_request {
     $reqinfo->{'end'} = time;
     $reqinfo->{'mcnt'} = $msgcount;
     $reqinfo->{'msgs'} = join( ',', @$msgs );
+    
+    my $glob = $src->{'obj'}{'_app'};
+    my $stack = $glob->{'root'};
+    #print Dumper( $stack );
+    $reqinfo->{'stack'} = $stack;
+    
     $rhash->set( i => $dbid, hash => $reqinfo );
 }
 
+sub get_request {
+    my ( $core, $self, $rid ) = @_;
+    return $self->{'src'}{'hash_req'}->get( $rid );
+}
 
 sub get_requests {
     my ( $core, $self ) = @_;
@@ -153,7 +222,7 @@ sub get_request_msgs {
     my $mhash = $self->{'src'}{'hash_msg'};
     
     my $req = $rhash->get( $rid );
-    my $msgtext = $req->{'msgs'};
+    my $msgtext = $req->{'msgs'} || '';
     my @msgs = split( /,/,$msgtext );
     my $msgs = $mhash->get_these( \@msgs );    
     # my $req = $rhash
