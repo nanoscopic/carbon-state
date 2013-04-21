@@ -116,71 +116,89 @@ sub route {
     while( @parts ) {
         my $joined = join('/', @parts );
         #$log->note( text => "Testing $joined" );
-        my $info;
-        if( $info = $rs->{ $joined } ) {
-            my $objname      = $info->{'obj'};
-            my $obj          = $r->get_mod( mod => $objname );
-            my $func         = $info->{'func'};
-            my $session_name = $info->{'session'} || 'DEFAULT';
-            my $perm = $self->{'src'}{'sesshash'}{ $session_name };
-            if( !$perm ) {
-                use Data::Dumper;
-                $Data::Dumper::Maxdepth = 2;
-                print Dumper( $self->{'src'} );
-                die "No map from session $session_name to perm module";
+        my $route;
+        if( $route = $rs->{ $joined } ) {
+            my $set = $route->{'set'};
+            my $info;
+            for my $ainfo ( @$set ) {
+                if( $ainfo->{'regex'} ) {
+                    my $x = $opath;
+                    $x =~ s|^/?$joined||g;
+                    #$log->note( text => "Checking $x against regex" );
+                    if( $x =~ $ainfo->{'regex'} ) {
+                        $info = $ainfo;
+                    }
+                }
+                else {
+                    $info = $ainfo;
+                }
             }
-            
-            my $bounce       = $info->{'bounce'};
-            my $extra        = $info->{'extra'} || {};
-            
-            my $session      = $sman->get_session( r => $r, cookie => $session_name );
-            
-            if( $session ) {
-                $r->log_start( sid => $session->{'session_id'} );
-                my $cookieman = $r->get_mod( mod => 'cookie_man' );
-                my $cookie = $cookieman->extend( cookie => $session_name, len => [ 1, 0, 0, 0 ] );
-                my $date = $cookie->{'expires'};
-                $log->note( text => "Loaded a session - extended cookie till $date" );
-                $session->show();
-                $r->set_permissions( perms => $perm->user_get_permissions( user => $session->get_user() ) );
-            }
-            else {
-                if( $bounce ) {
-                    $log->note( text =>  "Bounce to $bounce" );
-                    $r->redirect( url => $bounce );
+            if( $info ) {
+                my $objname      = $info->{'obj'};
+                my $obj          = $r->get_mod( mod => $objname );
+                my $func         = $info->{'func'};
+                my $session_name = $info->{'session'} || 'DEFAULT';
+                my $perm = $self->{'src'}{'sesshash'}{ $session_name };
+                if( !$perm ) {
+                    use Data::Dumper;
+                    $Data::Dumper::Maxdepth = 2;
+                    print Dumper( $self->{'src'} );
+                    die "No map from session $session_name to perm module";
+                }
+                
+                my $bounce       = $info->{'bounce'};
+                my $extra        = $info->{'extra'} || {};
+                
+                my $session      = $sman->get_session( r => $r, cookie => $session_name );
+                
+                if( $session ) {
+                    $r->log_start( sid => $session->{'session_id'}, url => $opath );
+                    my $cookieman = $r->get_mod( mod => 'cookie_man' );
+                    my $cookie = $cookieman->extend( cookie => $session_name, len => [ 1, 0, 0, 0 ] );
+                    my $date = $cookie->{'expires'};
+                    $log->note( text => "Loaded a session - extended cookie till $date" );
+                    $session->show();
+                    $r->set_permissions( perms => $perm->user_get_permissions( user => $session->get_user() ) );
+                }
+                else {
+                    if( $bounce ) {
+                        $log->note( text =>  "Bounce to $bounce" );
+                        $r->redirect( url => $bounce );
+                        return;
+                    }
+                    $r->log_start( sid => 'none', url => $opath );
+                }
+                
+                if( $full && $info->{'folder'} && $opath !~ m|/$| ) {
+                    $r->redirect( url => "$path/" );
                     return;
                 }
-                $r->log_start( sid => 'none', url => $opath );
-            }
-            
-            if( $full && $info->{'folder'} && $opath !~ m|/$| ) {
-                $r->redirect( url => "$path/" );
-                return;
-            }
-            
-            #$core->dumper( 'extra', $extra );
-            if( %$extra && $extra->{'tpls'} ) {
-                $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
-                my $conf = $extra->{'conf'};
-                my $atpl = $conf->{'tpl'};
                 
-                $tpl->{'mod_to_use'} = $atpl->{'mod'} ? $core->get_mod( $atpl->{'mod'} ) : $obj;
-                
-                my $map = $conf->{'map'};
-                if( $map ) {
-                    $tple = $core->get_mod('tpl_engine');
-                    $tple->run_map( map => $map );
+                #$core->dumper( 'extra', $extra );
+                if( %$extra && $extra->{'tpls'} ) {
+                    $tpl = $extra->{'tpl'} = $core->requestify( $extra->{'tpls'}, $r );
+                    my $conf = $extra->{'conf'};
+                    my $atpl = $conf->{'tpl'};
+                    
+                    $tpl->{'mod_to_use'} = $atpl->{'mod'} ? $core->get_mod( $atpl->{'mod'} ) : $obj;
+                    
+                    my $map = $conf->{'map'};
+                    if( $map ) {
+                        $tple = $core->get_mod('tpl_engine');
+                        $tple->run_map( map => $map );
+                    }
                 }
-            }
-            my $res = $obj->$func( %$extra );
-            if( $tpl ) {
-                my $text = $tpl->run();
-                if( $text ) {
-                    $r->out( text => $text );
+                my $res = $obj->$func( %$extra );
+                if( $tpl ) {
+                    my $text = $tpl->run();
+                    if( $text ) {
+                        $r->out( text => $text );
+                    }
                 }
+                $resolved = 1;
+                $r->log_end();
+                last;
             }
-            $resolved = 1;
-            last;
         }
         $full = 0;
         pop @parts;
@@ -305,17 +323,23 @@ sub route_path {
     # session - the cookie name that contains a valid session key
     # bounce  - whether or not to bounce if there is no key, and where to bounce to
     # extra   - other information to pass along
-    my ( $path, $obj, $func, $session, $bounce, $extra, $file ) = $core->get_arr( qw/path obj func session bounce extra file/ );
+    #my ( $path, $obj, $func, $session, $bounce, $extra, $file ) = $core->get_arr( qw/path obj func session bounce extra file/ );
+    my $in = $core->get_all();
+    my %parms = ( %$in );
+    $parms{'folder'} = $parms{'file'} ? 0 : 1;
     
     #print "Adding path to $path\n";
-    $self_src->{'path_routes'}{ $path } = {
-        obj => $obj, 
-        func => $func, 
-        session => $session, 
-        bounce => $bounce,
-        folder => $file ? 0 : 1,
-        extra => $extra
-    };
+    my $routes = $self_src->{'path_routes'};
+    my $path = $parms{'path'};
+    if( $routes->{ $path } ) {
+        my $set = $routes->{ $path }{'set'};
+        push( @$set, \%parms );
+    }
+    else {
+        $self_src->{'path_routes'}{ $path } = {
+            set => [ \%parms ]
+        };
+    }
 }
 
 1;

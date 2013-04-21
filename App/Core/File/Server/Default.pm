@@ -80,13 +80,30 @@ sub register_folders {
         my $web = xval $mux->{'url'};
         my $sys = xval $mux->{'sys'};
         my $fileroot = xval $mux->{'fileroot'};
+        my $exp;
+        if( $mux->{'regex'} ) {
+            $exp = xval $mux->{'regex'};
+        }
+        if( $mux->{'match'} ) {
+            $exp = xval $mux->{'match'};
+        }
+        if( $exp ) {
+            $exp = qr/$exp/;
+        }
         
         my $from = $fileroot ? "$fileroot/$web" : $web;
         $sys = $fileroot ? "$fileroot/$sys" : $sys;
         
         $log->note( text => "Folder map $session - $from -> $sys" );
         
-        $router->route_path( path => $from, obj => 'file_server', func => 'handle_file_req', session => $session, file => 1, extra => { conf => $mux, from => $from, sys => $sys } );
+        $router->route_path( 
+            path => $from, 
+            obj => 'file_server', 
+            func => 'handle_file_req', 
+            session => $session, 
+            file => 1,
+            regex => $exp,
+            extra => { conf => $mux, from => $from, sys => $sys } );
     }
 }
 
@@ -99,6 +116,8 @@ sub handle_file_req {
     my $sys = $core->get('sys');
     
     my $base = $src->{'base'};
+    
+    #$core->dumper( 'conf', $conf );
     
     my $url = $r->{'path'};
     my $log = $core->get_mod('log');
@@ -119,8 +138,14 @@ sub handle_file_req {
         #my $cache = $self->{'cache'};
         my $file = "$sys/$url";
         if( -e $file ) {
+            if( $conf->{'cache'} ) {
+                my $cache = xval $conf->{'cache'};
+                if( $cache ) {
+                    $r->expires( $cache );
+                }
+            }
             $r->{'content_type'} = $ctype;
-           
+            
             my $data = App::Core::slurp( $file );
             
             #$r->out( text => $data );

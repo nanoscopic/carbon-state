@@ -32,6 +32,7 @@ use vars qw/$VERSION/;
 use Data::Dumper;
 use threads::shared;
 use Time::HiRes qw/time/;
+use Date::Format;
 
 my $urid :shared;
 
@@ -55,6 +56,7 @@ sub init {
     $r->{'otype'} = '';
     $r->{'urid'} = $urid;
     $r->{'start'} = time;
+    $r->{'msgids'} = [];
     
     for my $modname ( keys %$modhash ) {
         my $mod = $modhash->{ $modname };
@@ -88,7 +90,9 @@ sub log_end {
     my ( $core, $r ) = @_;
     my $dbid = $r->{'dbid'};
     my $log = $r->{'log'};
-    $log->end_request( rid => $dbid );
+    my $msgs = $r->{'msgs'};
+    my $msgcount = $#$msgs + 1;
+    $log->stop_request( rid => $dbid, msgs => $r->{'msgs'}, msgcount => $msgcount );
 }
 
 sub out {
@@ -139,16 +143,44 @@ sub content_type_as_header {
 
 sub get_headers {
     my ( $core, $r ) = @_;
+    my $headers = '';
     if( $r->{'otype'} eq 'redirect' ) {
-        return "Location: /".$r->{'url'}."\r\n";
+        $headers .= "Location: /".$r->{'url'}."\r\n";
     }
     elsif( $r->{'otype'} eq 'notfound' ) {
         return "";
     }
     else {
-        return $r->content_type_as_header();
+        $headers .= $r->content_type_as_header();
     }
+    if( $r->{'expires'} ) {
+        $headers .= $r->expires_as_header();
+    }
+    return $headers;
     
+}
+
+sub expires {
+    my ( $core, $r, $expires ) = @_;
+    $r->{'expires'} = $expires;
+}
+
+sub expires_as_header {
+    my ( $core, $r ) = @_;
+    my $expires = $r->{'expires'};
+    my $seconds = 0;
+    if( $expires =~ m/([0-9]+)h/ ) { $seconds += $1 * 3600; }
+    if( $expires =~ m/([0-9]+)m/ ) { $seconds += $1 * 60; }
+    if( $expires =~ m/([0-9]+)s/ ) { $seconds += $1; }
+    my $header = '';
+    $header .= "Cache-Control: max-age=$seconds, must-revalidate\r\n";
+    my $now = time;
+    $now += $seconds;
+    
+    my $date = time2str('%a, %e %b %Y %X GMT', $now, 'GMT');
+    $date =~ s/  / /; # remove the double space caused by a day of month that is 1 character
+    $header .= "Expires: $date\r\n";
+    return $header;
 }
 
 sub get_body {

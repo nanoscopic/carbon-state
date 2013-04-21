@@ -31,7 +31,7 @@ use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
 #use ZMQ::Constants ':all';
 use ZMQ::Constants qw/ZMQ_PULL ZMQ_PUB ZMQ_IDENTITY ZMQ_RCVMORE ZMQ_POLLIN ZMQ_MSG_MORE/;
-use URI::Simple;
+#use URI::Simple;
 use CGI;
 use Text::TNetstrings qw/:all/;
 use threads;
@@ -108,7 +108,7 @@ sub server {
     
     #print "Start session hash:".$session_hash."\n";
     
-    $SIG{'INT'} = 'default';
+    #$SIG{'INT'} = 'default';
     
     my $thr = threads->self();
     my $tid = $thr->tid();
@@ -211,7 +211,7 @@ sub handle_request {
     my $data = $4;
     my $type = 'get';
     
-    print "Sending: $sender Id $id\n";
+    #print "Sending: $sender Id $id\n";
     # $data =~ s/\0*$//; remove the null from the end for printing more easily
     
     $data =~ m/^([0-9]+):/; 
@@ -222,8 +222,6 @@ sub handle_request {
     my $extra = length( $data ) - ( $tnetlen + $lenlen + 2 );
     my $post = '';
     my $postvars = {};
-    
-    #my $notice = '';
     
     if( $extra > 0 ) {
         my $xstr = substr( $data, $tnetlen + $lenlen + 2 );
@@ -241,15 +239,11 @@ sub handle_request {
         }
     }
     
-    #print "Data:$data\n";
     my $hash = decode_tnetstrings( $data );
     
     my $queryhash = 0;
-    #print Dumper( $hash );
-    if( $hash && $hash->{'QUERY'} ) {
-        my $query = $hash->{'QUERY'};
-        my $uri = new URI::Simple( "http://test.com/?$query" );
-        $queryhash = { %{ $uri->{'query'} } };
+    if( $hash && defined $hash->{'QUERY'} ) {
+        $queryhash = url2hash( $hash->{'QUERY'} );
     }
     
     my $content_type = $hash->{'content-type'};
@@ -290,14 +284,12 @@ sub handle_request {
                 else {
                     $postvars->{ $partname } = $parthash;
                 }
-                #push( @$postvars, $parthash );
             }
         }
     }
     elsif( $hash->{'METHOD'} eq 'POST' ) {
         $type = 'post';
-        my $uri = new URI::Simple( "http://test.com/?$post" );
-        $postvars = $uri->{'query'};
+        $postvars = url2hash( $post );
     }
     
     my $session = 0;
@@ -305,26 +297,19 @@ sub handle_request {
     my $r = $rman->new_request(
         path => $path,
         query => $queryhash,
-        #post => $post,
         postvars => $postvars,
         id => $id,
         ip => $hash->{'x-forwarded-for'},
-        type => $type
-        );
+        type => $type );
     $log->{'r'} = $r;
     
     $log->note( text => "Recieved request to $path");
     
     my $cookieman = $r->get_mod( mod => 'cookie_man' );
-    #$cookieman = $cookieman->{'src'};
-    #print "Session man: $cookieman\n";
     
     if( $hash->{'cookie'} ) {
         $cookieman->parse( raw => $hash->{'cookie'} );
     }
-    
-    #$r->{'session'} = $sman->get_session( r => $r );
-    # Session fetching is now handled in the router ( since different paths may need different session information )
     
     my $router = $r->get_mod( mod => 'web_router' );
 
@@ -335,9 +320,6 @@ sub handle_request {
     
     my $typeinfo = $r->get_type();
     my $restype = $typeinfo->get_res('type');
-    
-    #my $restype = $res->getres('type');
-    #my $body;
     
     my $code = $r->get_code();
     my $body = $r->get_body();
@@ -357,12 +339,8 @@ sub handle_request {
     }
     
     my $idlen = length( $id );
-        
-    
-    my $msg = "blah2 $idlen:$id, HTTP/1.1 $code\r\n$raw";
-    #print "Msg: $msg\n";
-    
-    my $len = length( $msg );
+    my $msg   = "blah2 $idlen:$id, HTTP/1.1 $code\r\n$raw";
+    my $len   = length( $msg );
     
     if( $len > 100000 ) {
         # Theoretically this should work, but Mongrel2 apparently does not support this
@@ -386,7 +364,6 @@ sub handle_request {
     }
     else {
         zmq_send( $outgoing, $msg );
-        
     }
     
     $r->end();
@@ -397,6 +374,29 @@ sub handle_request {
     $rlen /= 100;
     
     $log->note( text => "Request finished; len=${rlen}ms" );
+}
+
+sub url2hash {
+    my $url = shift;
+    my $hash;
+    
+    my @parts = split('&', $url );
+    for my $part ( @parts ) {
+        next if( ! defined $part );
+        $part =~ m/(.+)=(.+)/;
+        my $key = $1;
+        my $val = $2;
+        $key =~ s/%([a-zA-Z0-9]{2})/pack('H2',$1)/ge;$key =~ s/\+/ /g;
+        $val =~ s/%([a-zA-Z0-9]{2})/pack('H2',$1)/ge;$val =~ s/\+/ /g;
+        if( $key =~ m/^(.+)\[([0-9]+)\]$/ ) {
+            my $arr = $hash->{ $1 } ||= [];
+            $arr->[$2] = $val;
+        }
+        else {
+            $hash->{ $key } = $val;
+        }
+    }
+    return $hash;
 }
 
 sub process_postfile {

@@ -1,37 +1,66 @@
+# App::Core::Data::LockedHashSet
+# Version 0.01
+# Copyright (C) 2013 David Helkowski
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.  You may also can
+# redistribute it and/or modify it under the terms of the Perl
+# Artistic License.
+  
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+=head1 NAME
+
+App::Core::Data::LockedHashSet - App::Core Component
+
+=head1 VERSION
+
+0.01
+
+=cut
+
 package App::Core::Data::LockedHashSet;
-use Class::Core qw/:all/;
+use Class::Core 0.03 qw/:all/;
 use threads::shared;
-use Data::Dumper;
 use XML::Bare;
 use strict;
+use Time::HiRes qw/time/;
 
 my @arrs :shared;
 
+sub init {
+}
+
 sub construct {
     my ( $core, $self ) = @_;
-    #print Dumper( $self );
-    if( defined $self->{'id'} ) {
-    }
-    else {
+    
+    if( !defined $self->{'id'} ) {
         lock @arrs;
         my $id = $self->{'id'} = $#arrs + 1;
         my $newset = [];
         share $newset;
         $arrs[ $id ] = $self->{'set'} = $newset;
     }
+    else {
+        lock @arrs;
+        $self->{'set'} = $arrs[ $self->{'id'} ];
+    }
 }
 
 sub push {
     my ( $core, $self, $hash ) = @_;
     my $set = $self->{'set'};
-    my $i;
+    my $xmltext = _hash2xml( $hash );
     {
         lock $set;
-        my $xmltext = _hash2xml( $hash );
         CORE::push( @$set, $xmltext );
-        $i = $#$set;
+        return $#$set;
     }
-    return $i;    
 }
 
 sub get {
@@ -44,12 +73,25 @@ sub get {
         $xmltext = $set->[ $i ];
     }
     my ( $ob, $xml ) = XML::Bare->new( text => $xmltext );
-    my $simple = simplify( $xml );
-    return $simple;
+    return simplify( $xml );
+}
+
+sub set {
+    my ( $core, $self ) = @_;
+    my $i = $core->get('i');
+    my $hash = $core->get('hash');
+    my $set = $self->{'set'};
+    my $xmltext = _hash2xml( $hash );
+    {
+        lock $set;
+        return 0 if( $i > $#$set );
+        $set->[ $i ] = $xmltext;
+    }
+    return 1;
 }
 
 sub shift {
-    my ( $core, $self, $i ) = @_;
+    my ( $core, $self ) = @_;
     my $set = $self->{'set'};
     my $xmltext;
     {
@@ -58,8 +100,69 @@ sub shift {
         $xmltext = CORE::shift @$set;
     }
     my ( $ob, $xml ) = XML::Bare->new( text => $xmltext );
+    return simplify( $xml );
+}
+
+sub shiftn {
+    my ( $core, $self, $n ) = @_;
+    my $set = $self->{'set'};
+    my $xmltext;
+    my @ret;
+    {
+        lock $set;
+        return undef if( ( $#$set + 1 ) < $n );
+        $xmltext = CORE::shift @$set;
+        my ( $ob, $xml ) = XML::Bare->new( text => $xmltext );
+       CORE::push( @ret, simplify( $xml ) );
+    }
+    return \@ret;
+}
+
+sub getall {
+    my ( $core, $self ) = @_;
+    my $set = $self->{'set'};
+    my $xmlall = '';
+    {
+        lock $set;
+        
+        for( my $i=0;$i<=$#$set;$i++ ) {
+            my $xmltext = $set->[ $i ];
+            $xmlall .= "<n>$xmltext</n>";
+        }
+    }
+    my ( $ob, $xml ) = XML::Bare->new( text => $xmlall );
     my $simple = simplify( $xml );
-    return $simple;
+    my $ns = $simple->{'n'};
+    if( ref( $ns ) eq 'ARRAY' ) {
+        return $ns;
+    }
+    else {
+        return [ $ns ];
+    }
+}
+
+sub get_these {
+    my ( $core, $self, $arr ) = @_;
+    my $set = $self->{'set'};
+    my $xmlall = '';
+    {
+        lock $set;
+        
+        for( my $i=0;$i<=$#$arr;$i++ ) {
+            my $id = $arr->[ $i ];
+            my $text = $set->[ $id ];
+            $xmlall .= "<n>$text</n>";
+        }
+    }
+    my ( $ob, $xml ) = XML::Bare->new( text => $xmlall );
+    my $simple = simplify( $xml );
+    my $ns = $simple->{'n'};
+    if( ref( $ns ) eq 'ARRAY' ) {
+        return $ns;
+    }
+    else {
+        return [ $ns ];
+    }
 }
 
 sub popall {
@@ -68,11 +171,8 @@ sub popall {
     my @ret;
     {
         lock $set;
-        #print Dumper( $set );
-        #print "Len: $#$set\n";
         for( my $i=0;$i<=$#$set;$i++ ) {
             my $xmltext = $set->[ $i ];
-            #print "$xmltext\n";
             my ( $ob, $xml ) = XML::Bare->new( text => $xmltext );
             my $simple = simplify( $xml );
             CORE::push( @ret, $simple );
@@ -82,23 +182,9 @@ sub popall {
     return \@ret;
 }
 
-sub test {
-    my ( $core, $self ) = @_;
-    my $set = $self->{'set'};
-    {
-        lock $set;
-        print "id: ". $self->{'id'} . "\n" . Dumper( $set );
-    }
-}
-
 sub getset {
     my $id = CORE::shift;
-    my $set;
-    {
-        lock @arrs;
-        $set = $arrs[ $id ];
-    }
-    return App::Core::Data::LockedHashSet->new( id => $id, set => $set );
+    return App::Core::Data::LockedHashSet->new( id => $id );
 }
 
 sub simplify {
@@ -142,6 +228,7 @@ sub _hash2xml {
        }
     }
     else {
+        $node ||= '';
         if( $node =~ /[<]/ ) { $txt .= '<![CDATA[' . $node . ']]>'; }
         else { $txt .= $node; }
     }

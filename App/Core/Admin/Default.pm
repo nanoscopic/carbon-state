@@ -29,6 +29,7 @@ use Class::Core 0.03 qw/:all/;
 use strict;
 use Data::Dumper;
 use XML::Bare qw/xval/;
+use Date::Format;
 
 use vars qw/$VERSION $spec/;
 $VERSION = "0.02";
@@ -51,6 +52,7 @@ sub init {
     $router->route_path( path => "core/admin", obj => 'core_admin', func => 'admin', session => 'CORE', bounce => 'core/login' );
     $router->route_path( path => "core/log", obj => 'core_admin', func => 'log', session => 'CORE', bounce => 'core/login' );
     $router->route_path( path => "log", obj => 'core_admin', func => 'log', session => 'CORE' );
+    $router->route_path( path => "req", obj => 'core_admin', func => 'req', session => 'CORE' );
     $self->{'base'} = xval( $core->get_conf()->{'base'} );
     
     #my $api = $core->get_mod( 'core_api' );
@@ -73,10 +75,48 @@ sub admin {
         " );
 }
 
+sub req {
+    my ( $core, $self ) = @_;
+    my $log = $core->get_mod( 'log' );
+    my $root = $core->get_base();
+    my $reqs = $log->get_requests();
+    my $out = '';
+    $out .= "<table border='1' cellspacing='0' cellpadding='3'>
+    <tr><td>Req</td><td>Thread</td><td>Inst</td><td>URL</td><td>cookie</td><td>log count</td><td>start</td><td>len</td></tr>
+    ";
+    my @keys = ( 'thread_id', 'server_inst_id', 'url', 'cookie_id', 'mcnt' );
+    #my $i = 0;
+    for my $req ( @$reqs ) {
+        $out .= "<tr>";#<td>$i</td>";
+        #$i++;
+        my $rnum = $req->{'req_num'};
+        $out .= "<td><a href='/$root/log/?r=$rnum'>$rnum</a></td>";
+        for my $key ( @keys ) {
+            my $val = $req->{ $key } || '';
+            $out .= "<td>$val</td>";
+        }
+        my $start = $req->{'start'};
+        my $end = $req->{'end'};
+        my $len = '';
+        if( $end ) {
+            $len = $end - $start;
+            $len *= 1000000;
+            $len = int( $len );
+            $len /= 1000;
+            $len .= "ms";
+        }
+        $start = int( $start );
+        $start = time2str( '%C', $start );
+        $out .= "<td>$start</td><td>$len</td></tr>";
+    }
+    $out .= "</table>";
+    $self->{'r'}->out( text => $out );
+}
+
 sub log {
     my ( $core, $self ) = @_;
     my $log = $core->get_mod( 'log' );
-    my $items = $log->get_items();
+    
     #my $dump = Dumper( $items );
     my @obs;
     my $out;
@@ -88,6 +128,21 @@ sub log {
         $nocore = 1;
     }
     
+    my $items;
+    
+    my $single = 0;
+    my $start_time;
+    if( $q && $q->{'r'} ) {
+        $items = $log->get_request_msgs( $q->{'r'} - 1 );  
+        $single = 1;
+        
+    }
+    else {
+        $items = $log->get_items();
+    }
+    my $first = $items->[ 0 ];
+    $start_time = $first->{'time'};
+    
     if( !$nocore ) {
         $out .= "<a href='?nocore=1'>hide core logs</a><br>";
     }
@@ -98,21 +153,36 @@ sub log {
     <table cellpadding=3 border=1 cellspacing=0>";
     my $len = $#$items;
     
-    
-    
     for( my $i=$len;$i>=0;$i-- ) {
-        my $item = $items->[ $i ];
-        my ( $ob, $xml ) = XML::Bare->new( text => $item );
-        $xml = App::Core::simplify( $xml );
+        #my $item = $items->[ $i ];
+        #my ( $ob, $xml ) = XML::Bare->new( text => $item );
+        #$xml = App::Core::simplify( $xml );
+        my $xml = $items->[ $i ];
         my $type = $xml->{'type'} || '';
         my $text = $xml->{'text'} || '';
         my $time = $xml->{'time'} || '';
+        
+        my $dif = 0;
+        if( $i ) {
+            my $prevt = $items->[ $i - 1 ]{'time'};
+            $dif = $time - $prevt;
+        }
+        if( $single ) {
+            $time -= $start_time;
+            $time *= 1000 * 100;
+            $time = int( $time );
+            $time /= 100;
+            
+            $dif *= 1000 * 100;
+            $dif = int( $dif );
+            $dif /= 100;
+        }
         my $rid = $xml->{'rid'} || '';
-        my $tid = $xml->{'tid'};
+        my $tid = $xml->{'tid'} || '';
         my $trace = $xml->{'trace'} || '';
         $trace =~ s/,/<br>/g;
         if( $nocore && $trace =~ m|^App/Core| ) { next; }
-        $out .= "<tr><td>$type</td><td>$text</td><td>$time</td><td>$rid</td><td>$trace</td><td>$tid</td></tr>";
+        $out .= "<tr><td>$type</td><td>$text</td><td>$time</td><td>$dif</td><td>$rid</td><td>$trace</td><td>$tid</td></tr>";
     }
     $out .= "</table>";
     $self->{'r'}->out( text => $out );

@@ -524,7 +524,8 @@ sub create_object {
         if( $spectext eq 'file' ) {
             my $file = $class;
             $file =~ s|::|/|g;
-            ( $ob, $xml ) = new XML::Bare( file => "$file.pm.xml" );
+            my $pm_xml = $INC{ "$file.pm" } . ".xml";
+            ( $ob, $xml ) = new XML::Bare( file => $pm_xml );
         }
         else {
             ( $ob, $xml ) = new XML::Bare( text => $spectext );
@@ -619,6 +620,7 @@ sub _hash2xml {
        }
     }
     else {
+        $node ||= '';
         if( $node =~ /[<]/ ) { $txt .= '<![CDATA[' . $node . ']]>'; }
         else { $txt .= $node; }
     }

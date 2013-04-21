@@ -30,6 +30,10 @@ package App::Core::ClassCoreExtend;
 # The subroutines in this package extend the typical Class::Core::INNER ( aka $core )
 use Data::Dumper;
 
+sub get_modxml {
+    my ( $a, $virt ) = @_;
+    return App::Core::simplify( $virt->{'xml'} );
+}
 sub get_mod {
     my ( $a, $virt, $name, $req ) = @_;
     my $r = $virt->{'r'};
@@ -82,9 +86,32 @@ sub dumperx {
 sub dumper {
     my ( $a, $inner, $name, $val, $dep ) = @_;
     my ($package, $filename, $line) = caller(1);
-    my $d = Data::Dumper->new( [$val] );
-    $d->Maxdepth( $dep ) if( $dep );
-    my $data = "Dump from $package #$line\n  $name:\n  " . $d->Dump();
+    my $dump = '';
+    if( defined $val ) {
+        my $d = Data::Dumper->new( [$val] );
+        $d->Maxdepth( $dep ) if( $dep );
+        $dump = "  ". $d->Dump();
+    }
+    my $data = "Dump from $package #$line\n  $name:\n$dump";
+    print $data;
+    return $data;
+}
+sub dumpert { # dumper with trace; tdep = trace depth
+    my ( $a, $inner, $name, $val, $tdep, $dep ) = @_;
+    my ($package, $filename, $line) = caller(1);
+    my $dump = '';
+    if( defined $val ) {
+        my $d = Data::Dumper->new( [$val] );
+        $d->Maxdepth( $dep ) if( $dep );
+        $dump = "  ". $d->Dump();
+    }
+    my $data = "Dump from $package #$line\n  $name:\n$dump";
+    my $back = 3;
+    for( my $i=1;$i<=$tdep;$i++ ) {
+        my ($package, $filename, $line) = caller($back);
+        $back += 2;
+        $data .= "  $package #$line\n";
+    }
     print $data;
     return $data;
 }
@@ -106,6 +133,7 @@ use XML::Bare qw/xval forcearray/;
 use strict;
 use vars qw/$VERSION/;
 use Carp;
+use Data::Dumper;
 $VERSION = "0.02";
 
 our $spec;
@@ -139,6 +167,7 @@ sub register_class {
     my ( $core, $app ) = @_;
     my $name = $core->get('name');
     my $file = $core->get('file');
+    my $type = $core->get('type') || 'external';
     my $glob = $app->{'obj'}{'_glob'};
     my $classhash = $glob->{'classinfo'};
     $classhash->{ $name } = {
@@ -146,7 +175,8 @@ sub register_class {
         xml => { 
             name => { value => $name }, 
             file => { value => $file }
-        }
+        },
+        type => $type
     };
 }
 
@@ -202,12 +232,23 @@ sub run {
     
     $glob->{'classinfo'} ||= {};
     my $classhash = $glob->{'classinfo'};
+    
+    my $basic_conf = App::Core::simplify( $xml );
+    
+    my $cclasses = forcearray( $cxml->{'class'} );
+    if( @$cclasses ) {
+        for my $class ( @$cclasses ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'internal' };
+        }
+    }
     my $classes = forcearray( $xml->{'class'} );
     if( @$classes ) {
         for my $class ( @$classes ) {
             my $name = xval $class->{'name'};
             my $file = xval $class->{'file'};
-            $classhash->{ $name } = { file => $file, xml => $class };
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'external' };
         }
     }
     my $mclasses = forcearray( $cur_mode->{'class'} );
@@ -215,7 +256,7 @@ sub run {
         for my $class ( @$mclasses ) {
             my $name = xval $class->{'name'};
             my $file = xval $class->{'file'};
-            $classhash->{ $name } = { file => $file, xml => $class };
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'external' };
         }
     }
     
@@ -519,22 +560,30 @@ sub fill_dollars {
 }
 
 sub simplify {
-    my $node = shift;
+    my ( $node, $maxdep, $dep ) = @_;
+    $dep ||= 0;
     my $ref = ref( $node );
     if( $ref eq 'ARRAY' ) {
+        return undef if( defined $maxdep && $dep > $maxdep );
         my @ret;
         for my $sub ( @$node ) {
-            push( @ret, simplify( $sub ) );
+            my $val = simplify( $sub, $maxdep, $dep + 1 );
+            push( @ret, $val ) if( defined $val );
         }
         return \@ret;
     }
     if( $ref eq 'HASH' ) {
         my %ret;
         my $cnt = 0;
-        for my $key ( keys %$node ) {
-            next if( $key eq 'value' || $key =~ m/^_/ );
-            $cnt++;
-            $ret{ $key } = simplify( $node->{ $key } );
+        my @keys = keys %$node;
+        
+        if( ! defined $maxdep || $dep <= $maxdep ) {
+            for my $key ( @keys ) {
+                next if( $key eq 'value' || $key =~ m/^_/ );
+                $cnt++;
+                my $val = simplify( $node->{ $key }, $maxdep, $dep + 1 );
+                $ret{ $key } = $val if( defined $val );
+            }
         }
         if( $cnt == 0 ) {
             return $node->{'value'};
@@ -555,6 +604,11 @@ sub load_module {
     }
     $used_mods{ $file } = 1;
     my $newref = \&{"$file\::new"};
+    my $type = $info->{'type'} || 'external';
+    if( !$info->{'name'} ) {
+        print Dumper( $info );
+        die "Module does not have a name";
+    }
     my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
     my $call = $info->{'call'};
     my $name = $info->{'name'};
@@ -581,23 +635,30 @@ sub load_class {
     my $r = $core->get('r');
     my $session = $core->get('session');
     my $parms = $core->get('parms') || {};
-    
+       
     my $classinfo = $glob->{'classinfo'};
     my $info = $classinfo->{ $mod } or confess( "Cannot find class $mod" );
+    my $type = $info->{'type'} || 'external';
+    my $internal = ( $type eq 'internal' );
     my $file = $info->{'file'};
     
     if( !$used_mods{ $file } ) {
         eval("use $file;");
         if( $@ ) { # was $! before
-            my $log = $core->get_mod('log');
-            $log->error( text => "Error loading $file - $@" );
+            my $log = $app->get_mod( mod => 'log', req => 0 );
+            if( $log ) {
+                $log->error( text => "Error loading $file - $@" );
+            }
+            else {
+                print "Error loading $file - $@";
+            }
             die;
             #return 0;
         }
     }
     $used_mods{ $file } = 1;
     my $newref = \&{"$file\::new"};
-    my $callback = \&check; # Always do logging of class calls
+    my $callback = ( $internal ? 0 : \&check ); # Always do logging of class calls
     return $newref->( 
         $file, 
         obj => { 
@@ -629,6 +690,9 @@ sub check {
     my $obj = $virt->{'obj'};
     my $cls = $obj->{'_class'};
     my $glob = $obj->{'_glob'};
+    if( !$glob->{'log'} ) {
+        print "aaaFunction call - $cls\::$func";
+    }
     $glob->{'log'}->noter( text => "Function call - $cls\::$func", r => $virt->{'r'} );
     my $spec = $core->{'_funcspec'};
     if( $spec->{'perms'} && $virt->{'r'} ) {

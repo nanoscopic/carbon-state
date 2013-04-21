@@ -47,13 +47,14 @@ sub init {
 
 sub get_session {
     my ( $core, $self ) = @_;
-    print "Call to get_session\n";
+    #print "Call to get_session\n";
     $self = $self->{'src'} || $self;
     
     my $r = $core->get('r');
     my $cookie = $core->get('cookie');# name of cookie session id is in
     my $ip = $r->{'ip'};
     my $id = '';
+    my $log = $core->get_mod( 'log' );
     
     my $cookieman = $r->get_mod( mod => 'cookie_man' );
     
@@ -74,7 +75,7 @@ sub get_session {
         }
     }
     else {
-        print "No cookie with name $cookie found\n";
+        $log->error( text => "No cookie with name $cookie found" );
     }
     
     if( $ip eq '172.22.27.133' ) {
@@ -86,13 +87,13 @@ sub get_session {
     lock $self->{'sessions'};
     my $raw;
     if( $raw = $self->{'sessions'}{ $id } ) {
-        print "Fetched session for $id\n";
+        $log->note( text => "Fetched session for $id" );
         my $session = App::Core::Session::Default->new( id => $id, man => $self );
         $session->de_serialize( raw => $raw );
         return $session;
     }
     else {
-        print "No session found under id '$id'\n";
+        $log->note( text => "No session found under id '$id'" );
         #print Dumper( $self->{'sessions'} );
     }
     
