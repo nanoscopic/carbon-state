@@ -1,4 +1,4 @@
-# App::Core::Shared::HTTP_Server_Simple_Wrapper
+# App::Core::Session::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,33 +16,73 @@
 
 =head1 NAME
 
-App::Core::Shared::HTTP_Server_Simple_Wrapper - App::Core Component
+App::Core::Session::Default - App::Core Component
 
 =head1 VERSION
 
-0.01
+0.02
 
 =cut
 
-package App::Core::Shared::HTTP_Server_Simple_Wrapper;
-use base qw/HTTP::Server::Simple::CGI/;
+package App::Core::Session::Default;
+use strict;
+use Class::Core qw/:all/;
+use vars qw/$VERSION/;
+use XML::Bare;
+use Data::Dumper;
+$VERSION = "0.02";
 
-sub set_handler {
-    my $self = shift;
-    my $func = shift;
-    my @params = @_;
-    $self->{'handler'} = $func;
-    $self->{'handler_params'} = \@params;
+sub construct {
+    my ( $core, $self ) = @_;
+    $self->{'dat'} = { test => 'blahblah' };
+    #print "Constructing a session\n";
 }
 
-sub handle_request {
-    my ( $self, $cgi ) = @_;
-    #print STDERR "ok\n";
-    print "HTTP/1.0 200 OK\r\n";
-    print $cgi->header;
-    my $handler = $self->{'handler'};
-    my $params = $self->{'handler_params'};
-    $handler->( $cgi, @$params );
+# called at the end of a session
+sub cleanup {
+}
+
+sub register_cleanup {
+    
+}
+
+sub show {
+    my ( $core, $self, ) = @_;
+    my $dat = $self->{'dat'};
+    print "Session:\n  ".Dumper( $dat );
+}
+
+sub de_serialize {
+    my ( $core, $self ) = @_;
+    my $raw = $core->get('raw');
+    my ( $ob, $xml ) = new XML::Bare( text => $raw );
+    $self->{'dat'} = App::Core::simplify( $xml );
+    return $self;
+}
+
+sub get_user {
+    my ( $core, $self ) = @_;
+    return $self->{'dat'}{'user'};
+}
+
+sub set_user {
+    my ( $core, $self ) = @_;
+    $self->{'dat'}{'user'} = $core->get('user');
+}
+
+sub save {
+    my ( $core, $self ) = @_;
+    $self->{'man'}->save_session( id => $self->{'id'}, data => $self );
+}
+
+sub serialize {
+    my ( $core, $self ) = @_;
+    return Class::Core::_hash2xml( $self->{'dat'} );
+}
+
+sub get_id {
+    my ( $core, $self ) = @_;
+    return $self->{'id'};
 }
 
 1;

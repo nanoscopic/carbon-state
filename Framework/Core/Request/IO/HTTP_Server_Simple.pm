@@ -1,4 +1,4 @@
-# App::Core::Shared::HTTP_Server_Simple_Wrapper
+# App::Core::Request::IO::HTTP_Server_Simple
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,33 +16,48 @@
 
 =head1 NAME
 
-App::Core::Shared::HTTP_Server_Simple_Wrapper - App::Core Component
+App::Core::Request::IO::HTTP_Server_Simple - App::Core Component
 
 =head1 VERSION
 
-0.01
+0.02
 
 =cut
 
-package App::Core::Shared::HTTP_Server_Simple_Wrapper;
-use base qw/HTTP::Server::Simple::CGI/;
+package App::Core::Request::IO::HTTP_Server_Simple;
+use strict;
+use Class::Core 0.03 qw/:all/;
+use App::Core::Shared::HTTP_Server_Simple_Wrapper;
+use Data::Dumper;
 
-sub set_handler {
-    my $self = shift;
-    my $func = shift;
-    my @params = @_;
-    $self->{'handler'} = $func;
-    $self->{'handler_params'} = \@params;
+use vars qw/$VERSION/;
+$VERSION = "0.02";
+
+sub init {
+    my ( $core, $self ) = @_;
 }
 
-sub handle_request {
-    my ( $self, $cgi ) = @_;
-    #print STDERR "ok\n";
-    print "HTTP/1.0 200 OK\r\n";
-    print $cgi->header;
-    my $handler = $self->{'handler'};
-    my $params = $self->{'handler_params'};
-    $handler->( $cgi, @$params );
+sub run {
+    my ( $core, $self ) = @_;
+    my $app = $self->{'obj'}{'_app'};
+    $self->{'router'} = $app->get_mod( mod => 'web_router' );
+    $self->{'log'} = $app->get_mod( mod => 'log' );
+    #print Dumper( $self->{'router'}{'route'} );
+    #print Dumper( $self->{'router'} );
+    my $server = App::Core::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );
+    $server->set_handler( \&go, $self );
+    $server->run();
+}
+
+sub go {
+    my ( $cgi, $self ) = @_;
+    my $app = $self->{'obj'}{'_app'};
+    my $path = $cgi->path_info();
+    my $log = $self->{'log'};
+    $log->note( text => "Recieved web request for $path" );
+    my $router = $self->{'router'};
+    $router->route( blah => 'test');
+    print "$path test\n";
 }
 
 1;
@@ -74,3 +89,5 @@ Component of L<App::Core>
   GNU General Public License for more details.
 
 =cut
+
+

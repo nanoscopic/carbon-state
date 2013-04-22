@@ -16,13 +16,52 @@ name: Framework-Core
 no_index:
   directory:
     - t
-    - inc
 requires:
   Carp: 0
-  Class::Core: 0.03
   Exporter: 0
-  Term::ANSIColor: 0
   Test::More: 0
-  URI::Escape: 0
   XML::Bare: 0.48
-version: 0.01
+  Class::Core: 0.03
+  Term::ANSIColor: 0
+  URI::Escape: 0
+provides:
+  Framework::Core:
+    file: Core.pm
+    version: 0.02
+  Framework::Core::Admin::Default
+    file: Core/Admin/Default.pm
+    version: 0.02
+  Framework::Core::Cookie::Manager::Default
+    file: Core/Cookie/Manager/Default.pm
+    version: 0.02
+  Framework::Core::Log::Default
+    file: Core/Log/Default.pm
+    version: 0.02
+  Framework::Core::Permission::Manager::Default
+    file: Core/Permission/Manager/Default.pm
+    version: 0.02
+  Framework::Core::Request::Default
+    file: Core/Request/Default.pm
+    version: 0.02
+  Framework::Core::Request::IO::HTTP_Server_Simple
+    file: Core/Request/IO/HTTP_Server_Simple.pm
+    version: 0.02
+  Framework::Core::Request::IO::Mongrel2
+    file: Core/Request/IO/Mongrel2.pm
+    version: 0.02
+  Framework::Core::Request::Manager::Default
+    file: Core/Request/Manager/Default.pm
+    version: 0.02
+  Framework::Core::Router::Default
+    file: Core/Router/Default.pm
+    version: 0.02
+  Framework::Core::RPC::IO::Mongrel2
+    file: Core/RPC/IO/Mongrel2.pm
+    version: 0.02
+  Framework::Core:Session::Manager::Default
+    file: Core/Session/Manager/Default.pm
+    version: 0.02
+  Framework::Core::Shared::HTTP_Server_Simple_Wrapper
+    file: Core/Shared/HTTP_Server_Simple_Wrapper.pm
+    version: 0.01
+version: 0.02

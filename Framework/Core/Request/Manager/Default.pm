@@ -1,4 +1,4 @@
-# App::Core::Shared::HTTP_Server_Simple_Wrapper
+# App::Core::Request::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,33 +16,51 @@
 
 =head1 NAME
 
-App::Core::Shared::HTTP_Server_Simple_Wrapper - App::Core Component
+App::Core::Request::Manager::Default - App::Core Component
 
 =head1 VERSION
 
-0.01
+0.02
 
 =cut
 
-package App::Core::Shared::HTTP_Server_Simple_Wrapper;
-use base qw/HTTP::Server::Simple::CGI/;
+package App::Core::Request::Manager::Default;
+use Class::Core 0.03 qw/:all/;
+use strict;
+use vars qw/$VERSION/;
+use App::Core::Request::Default 0.01;
+use Date::Format;
+$VERSION = "0.02";
 
-sub set_handler {
-    my $self = shift;
-    my $func = shift;
-    my @params = @_;
-    $self->{'handler'} = $func;
-    $self->{'handler_params'} = \@params;
+sub init {
+    my ( $core, $self ) = @_;
+    my $app = $core->get_app();
+    $app->register_class( name => 'req', file => 'App::Core::Request::Default' ); 
 }
 
-sub handle_request {
-    my ( $self, $cgi ) = @_;
-    #print STDERR "ok\n";
-    print "HTTP/1.0 200 OK\r\n";
-    print $cgi->header;
-    my $handler = $self->{'handler'};
-    my $params = $self->{'handler_params'};
-    $handler->( $cgi, @$params );
+my $rid = 0;
+
+sub new_request {
+    my ( $core, $manager ) = @_;
+        
+    my $v = $core->get_all(); # path,query,post,cookies,up,postvars,type, more?
+    $v->{'app'} = $core->get_app();
+    
+    $rid++;
+    my $now = time2str('%X', time);
+    $v->{'id'} = $v->{'id'}. '.' . $rid . '.' . $now;
+    my $req = $core->create( 'req', %$v );
+    $req->{'r'} = $req;
+    
+    $req->init();
+    
+    return $req;
+    #app
+    #  conf
+    #  obj
+    #  r
+    #  session
+    #  modhash ( modules by name )
 }
 
 1;

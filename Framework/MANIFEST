@@ -5,11 +5,16 @@ MANIFEST
 META.yml
 README
 Core/Admin/Default.pm
+Core/Cookie/Manager/Default.pm
 Core/Log/Default.pm
+Core/Permission/Manager/Default.pm
+Core/Request/Default.pm
+Core/Request/IO/HTTP_Server_Simple.pm
+Core/Request/IO/Mongrel2.pm
+Core/Request/Manager/Default.pm
+Core/Router/Default.pm
+Core/RPC/IO/Mongrel2.pm
+Core/Session/Default.pm
+Core/Session/Manager/Default.pm
 Core/Shared/HTTP_Server_Simple_Wrapper.pm
-Core/Web/CookieMan/Default.pm
-Core/Web/Request/HTTP_Server_Simple.pm
-Core/Web/Request/Mongrel2.pm
-Core/Web/Router/Default.pm
-Core/Web/SessionMan/Default.pm
-META.json                                Module JSON meta-data (added by MakeMaker)
+

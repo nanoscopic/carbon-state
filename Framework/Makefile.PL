@@ -11,7 +11,7 @@ my @basics = ( AUTHOR       => 'David Helkowski <cpan@codechild.com>',
                     Exporter => 0, 
                     "Test::More" => 0, 
                     "XML::Bare" => "0.48", 
-                    "Class::Core" => "0.03",
+                    "Class::Core" => "0.04",
                     "Term::ANSIColor" => 0,
                     "URI::Escape" => 0
                }

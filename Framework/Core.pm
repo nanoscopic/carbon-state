@@ -1,4 +1,4 @@
-# Framework::Core
+# App::Core Framework
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,84 +16,127 @@
 
 =head1 NAME
 
-Framework::Core - Application framework built around Class::Core wrapper system
+App::Core - Application framework built around Class::Core wrapper system
 
 =head1 VERSION
 
-0.01
+0.02
 
 =cut
 
 use lib '..';
-use Framework::Core::Web::Router::Default;
-use Framework::Core::Log::Default;
-use Framework::Core::Web::SessionMan::Default;
-use Framework::Core::Web::CookieMan::Default;
-use Framework::Core::Admin::Default;
 
-package Framework::Core::Perm::Default;
-use Class::Core 0.03 qw/:all/;
-use strict;
-
-sub init {
-}
-
-package Framework::Core::Request;
-use Class::Core qw/:all/;
-use strict;
-
-our $spec;
-$spec = <<DONE;
-DONE
-
-sub init {
-    my ( $core, $r ) = @_;
-    my $app = $r->{'app'};
-    my $modhash = $app->{'modhash'};
-    my %rmods;
-    for my $modname ( keys %$modhash ) {
-        my $mod = $modhash->{ $modname };
-        my $dup = $mod->_duplicate( r => $r );
-        if( $dup->_hasfunc('init_session') ) {
-            $dup->init_session();
-        }
-        $rmods{$modname} = $dup;
-    }
-    $r->{'mods'} = \%rmods;
-    #print "Request was init'ed\n";
-}
-
-sub end {
-    my ( $core, $r ) = @_;
-    my $mods = $r->{'mods'};
-    for my $modname ( keys %$mods ) {
-        my $mod = $mods->{ $modname };
-        if( $mod->_hasfunc('end_session') ) {
-            $mod->end_session();
-        }
-    }
-    undef $r->{'mods'};
-    #print "Request was ended\n";
-}
-
-sub getmod {
-    my ( $core, $r ) = @_;
-    #my $glob = $app->{'_glob'};
-    my $modname = $core->get('mod');
-    #print "Attempting to get mod $modname\n";
-    return $r->{'mods'}{ $modname } || die "Cannot find mod $modname\n";
-}
-
-package Framework::Core;
-use Class::Core qw/:all/;
+package App::Core::ClassCoreExtend;
+# The subroutines in this package extend the typical Class::Core::INNER ( aka $core )
 use Data::Dumper;
+
+sub get_modxml {
+    my ( $a, $virt ) = @_;
+    return App::Core::simplify( $virt->{'xml'} );
+}
+sub get_mod {
+    my ( $a, $virt, $name, $req ) = @_;
+    my $r = $virt->{'r'};
+    if( $r ) {
+        my ( $b, $cls, $line ) = caller(0);
+        #print "GETMOD $cls #$line\n";
+        return $virt->{'r'}->get_mod( mod => $name ) 
+    }
+    my $app = $virt->{'obj'}{'_app'};
+    return $app->get_mod( mod => $name, req => $req );
+}
+# This function fetches the global application conf
+sub get_conf {
+    my ( $a, $virt, $name ) = @_;
+    my $conf = $virt->{'obj'}{'_glob'}{'conf'};
+    return $conf;
+}
+sub start_tpl { 
+    my ( $a, $virt, $name ) = @_;
+    my $tple;
+    if( $virt->{'r'} ) { $tple = $virt->{'r'}->get_mod( mod => 'tpl_engine' ); }
+    else               { $tple = $virt->{'obj'}{'_app'}->get_mod( mod => 'tpl_engine' ); }
+    return $tple->start( name => $name, obj => $virt );
+}
+sub create {
+    my $a = shift;
+    my $virt = shift;
+    my $mod = shift;
+    my $app = $virt->{'obj'}{'_app'};
+    my $r = $virt->{'r'};
+    my $session = $virt->{'session'};
+    my %more = @_;
+    return $app->load_class( mod => $mod, r => $r, session => $session, parms => \%more );
+}
+
+sub get_app  { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}; }
+sub get_base { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_glob'}{'conf'}{'base'}{'value'}; }
+sub get_mode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
+
+
+sub dumperx {
+    my ( $a, $virt, $name, $val, $dep ) = @_;
+    my ($package, $filename, $line) = caller(1);
+    my $d = Data::Dumper->new( [App::Core::simplify( $val )] );
+    $d->Maxdepth( $dep ) if( $dep );
+    my $data = "XDump from $package #$line\n  $name:\n  " . $d->Dump();
+    print $data;
+    return $data;
+}
+sub dumper {
+    my ( $a, $inner, $name, $val, $dep ) = @_;
+    my ($package, $filename, $line) = caller(1);
+    my $dump = '';
+    if( defined $val ) {
+        my $d = Data::Dumper->new( [$val] );
+        $d->Maxdepth( $dep ) if( $dep );
+        $dump = "  ". $d->Dump();
+    }
+    my $data = "Dump from $package #$line\n  $name:\n$dump";
+    print $data;
+    return $data;
+}
+sub dumpert { # dumper with trace; tdep = trace depth
+    my ( $a, $inner, $name, $val, $tdep, $dep ) = @_;
+    my ($package, $filename, $line) = caller(1);
+    my $dump = '';
+    if( defined $val ) {
+        my $d = Data::Dumper->new( [$val] );
+        $d->Maxdepth( $dep ) if( $dep );
+        $dump = "  ". $d->Dump();
+    }
+    my $data = "Dump from $package #$line\n  $name:\n$dump";
+    my $back = 3;
+    for( my $i=1;$i<=$tdep;$i++ ) {
+        my ($package, $filename, $line) = caller($back);
+        $back += 2;
+        $data .= "  $package #$line\n";
+    }
+    print $data;
+    return $data;
+}
+
+sub requestify {
+    my ( $a, $virt, $ob, $r ) = @_;
+    $r ||= $virt->{'r'};
+    
+    my $dup = $ob->_duplicate( r => $r, _extend => $ob->{'_extend'} );
+    if( $dup->_hasfunc('init_request') ) {
+        $dup->init_request();
+    }
+    return $dup;
+}
+
+package App::Core;
+use Class::Core qw/:all/;
 use XML::Bare qw/xval forcearray/;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = "0.01";
+use Carp;
+use Data::Dumper;
+$VERSION = "0.02";
 
 our $spec;
-
 $spec = <<DONE;
 <func name='run'>
     <in name='config' exists type='path'/>
@@ -101,237 +144,613 @@ $spec = <<DONE;
 </func>
 DONE
 
-#my %modhash;
+my @apps;
 
-sub new_request {
+my $runthread;
+
+sub construct {
     my ( $core, $app ) = @_;
-    my $path = $core->get( 'path' );
-    # query post cookies
-    my $query = $core->get('query');
-    my $post = $core->get('post');
-    my $cookies = $core->get('cookies');
-    my $ip = $core->get('ip');
-    #print Dumper( $cookies );
-    
-    my $req = Framework::Core::Request->new( 
-        app => $app,
-        path => $path,
-        query => $query,
-        post => $post,
-        cookies => $cookies,
-        ip => $ip );
-    
-    $req->init();
-    return $req;
-    #app
-    #  conf
-    #  obj
-    #  r
-    #  session
-    #  modhash ( modules by name )
+    push( @apps, $app );
+    $app->{'namespace_map'} = {};
 }
+
+sub INT_handler {
+    my $thr = threads->self();
+    my $tid = $thr->tid();
+    exit if( $tid != $runthread );
+    for my $app ( @apps ) {
+        $app->end();
+    }
+    exit;
+}
+
+sub register_class {
+    my ( $core, $app ) = @_;
+    my $name = $core->get('name');
+    my $file = $core->get('file');
+    my $type = $core->get('type') || 'external';
+    my $glob = $app->{'obj'}{'_glob'};
+    my $classhash = $glob->{'classinfo'};
+    $classhash->{ $name } = {
+        file => $file, 
+        name => $name,
+        xml => { 
+            name => { value => $name }, 
+            file => { value => $file }
+        },
+        type => $type
+    };
+}
+
+sub init_threads {
+    my ( $core, $app ) = @_;
+    
+    my $tid = $core->get('tid');
+    
+    my $modhash = $app->{'obj'}{'modhash'};
+    
+    for my $modname ( keys %$modhash ) {
+        my $mod = $modhash->{ $modname };
+        if( $mod->_hasfunc('init_thread') ) {
+            $mod->init_thread( tid => $tid );
+        }
+    }
+}
+
+my %used_mods;
 
 sub run {
     my ( $core, $app ) = @_;
-    #print Dumper( $core );
+    
+    my $thr = threads->self();
+    $runthread = $thr->tid();
+    $SIG{'INT'} = 'App::Core::INT_handler';
+    
     my $conf_file = $core->get('config');
-    my ( $ob, $xml ) = new XML::Bare( file => $conf_file );
+    my $core_file = $core->get('core') || 'core.xml';
+    my ( $ob , $xml  ) = new XML::Bare( file => $conf_file );
+    my ( $cob, $cxml ) = new XML::Bare( file => $core_file );
+    $cxml = $cxml->{'xml'};
+    $xml = $xml->{'xml'};
+    
+    my $modes = forcearray( $xml->{'mode'} );
+    my $cmodes = forcearray( $cxml->{'mode'} ); # core modes
+    
+    my %modehash;
+    my %cmodehash;
+    for my $mode  ( @$modes  ) { my $name = xval $mode ->{'name'}; $modehash { $name } = $mode;  }
+    for my $cmode ( @$cmodes ) { my $name = xval $cmode->{'name'}; $cmodehash{ $name } = $cmode; }
+    
+    my $selected_mode = $app->{'_mode'} = $core->get('mode') || 'default';
+    if( $selected_mode ne 'default' ) {
+        print "Starting system in mode '$selected_mode'\n";
+    }
+    my $cur_mode;
+    my $cur_cmode;
+    if( $modehash {$selected_mode} ) { $cur_mode  = $modehash {$selected_mode}; }
+    if( $cmodehash{$selected_mode} ) { $cur_cmode = $cmodehash{$selected_mode}; }
     
     my $glob = $app->{'obj'}{'_glob'};
     
-    $glob->{'conf'} = $xml = $xml->{'xml'};
-    my $r = $app->{'r'} = 'init';
-    my $session = $app->{'session'} = 'init';
-    my $modules = forcearray( $xml->{'module'} );
+    $glob->{'classinfo'} ||= {};
+    my $classhash = $glob->{'classinfo'};
+    
+    my $basic_conf = App::Core::simplify( $xml );
+    
+    my $cclasses = forcearray( $cxml->{'class'} );
+    if( @$cclasses ) {
+        for my $class ( @$cclasses ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'internal' };
+        }
+    }
+    my $classes = forcearray( $xml->{'class'} );
+    if( @$classes ) {
+        for my $class ( @$classes ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'external' };
+        }
+    }
+    my $mclasses = forcearray( $cur_mode->{'class'} );
+    if( @$mclasses ) {
+        for my $class ( @$mclasses ) {
+            my $name = xval $class->{'name'};
+            my $file = xval $class->{'file'};
+            $classhash->{ $name } = { file => $file, xml => $class, type => 'external' };
+        }
+    }
+    
+    $glob->{'conf'} = $xml;
+    my $r = $app->{'r'} = '';
+    my $session = $app->{'session'} = '';
+    
+    my $imodules = forcearray( $cxml->{'module'} ); # internal core modules
+    my $modules  = forcearray( $xml->{'module'} );
+    
+    # grab modules in core config related to the current mode and add them to the internal module array being used
+    my $i_mode_modules = forcearray( $cur_cmode->{'module'} );
+    push( @$imodules, @$i_mode_modules );
+    
+    # grab modules in config related to the current mode and add them to the module array being used
+    my $mode_modules = forcearray( $cur_mode->{'module'} );
+    push( @$modules, @$mode_modules );
     
     my $log = 0;
-    
-    my %order;
-    my @mod_names;
-    my %mod_hash;
-    for my $module ( @$modules ) {
-        my $name = xval $module->{'name'};
-        my $file = xval $module->{'file'}, $name;
-        my $order = $module->{'order'};
-        my $init = xval $order->{'init'};
-        #my $init_session = xval $order->{'init_session'};
-        $order{ $name } = $init;
-        $mod_hash{ $name } = { file => $file, name => $name, init => $init };
-        push( @mod_names, $name ) if( $name !~ m/^(log)$/ );
-    }
-    @mod_names = sort { $order{ $a } <=> $order{ $b } } @mod_names;    
-    
-    #my $virt = $core->{'virt'};
-    
-    
-    #print Dumper( $app );
+        
     $glob->{'create'} = \&create_test;
     
-    my $modhash = $app->{'modhash'} = {};
+    my $modhash = $app->{'obj'}{'modhash'} = {};
     
-    my $wr_xml = $xml->{'web_request'};
-    my $webmod = "";
-    my $wr_mod = xval $wr_xml->{'mod'}, 'mongrel2';
-    if( $wr_mod eq 'mongrel2' ) {
-        use Framework::Core::Web::Request::Mongrel2;
-        $webmod = 'Framework::Core::Web::Request::Mongrel2';
-    }
-    elsif( $wr_mod eq 'http_server' ) {
-        use Framework::Core::Web::Request::HTTP_Server_Simple;
-        $webmod = 'Framework::Core::Web::Request::HTTP_Server_Simple';
+    my %order_by_name;
+    my %mod_by_order;
+    
+    my $maxmod = 0;
+    
+    for my $imod ( @$imodules ) {
+        my $name = xval $imod->{'name'};
+        $maxmod++;
+        
+        $mod_by_order{ $maxmod } = { xml => $imod, type => 'internal' };
+        $order_by_name{ $name } = $maxmod;
     }
     
-    # Load all of the builtin modules
-    my @builtins = (
-            { name => 'log', mod => 'Framework::Core::Log::Default' },
-            #{ name => 'api_request', mod => 'Framework::Core::API::ZMQ' }, # handle api requests
-            #{ name => 'api_router', mod => 'Framework::Core::API::Dist' }, # api core handler
-            #{ name => 'perm', mod => 'Framework::Core::Perm::Default' }, # the module that figures out permissions
-            { name => 'session_man', mod => 'Framework::Core::Web::SessionMan::Default' }, # the module that creates sessions
-            { name => 'cookie_man', mod => 'Framework::Core::Web::CookieMan::Default' },
-            { name => 'web_request', mod => $webmod }, # handle "web requests" ( FCGI / Mongrel2 0MQ / ... )
-            { name => 'web_router', mod => 'Framework::Core::Web::Router::Default' },
-            { name => 'core_admin', mod => 'Framework::Core::Admin::Default' },
-            #{ name => 'auth', mod => '' } # the default module that authenticates users
-            #{ name => 'locking', mod => '' } # module to handle object locking/concurrency
-        );
-    BT: for my $builtin ( @builtins ) {
-        my $name = $builtin->{'name'};
-        my $modpath = $builtin->{'mod'};
-        my $mod_info = $mod_hash{$name};
-        my $mod;
-        my $type = 'custom';
-        if( $mod_info ) {
-            
-            my $res = load_module( $glob, $mod_info, $app );
-            
-            if( !$res && $log ) {
-                $log->error( text => "Cannot load Module $name" );
-                next;
+    for my $emod ( @$modules ) {
+        my $name = xval $emod->{'name'};
+        my $order = $order_by_name{ $name };
+        if( $order ) { 
+            if( $emod->{'file'} ) { # over-riding an internal module
+                $mod_by_order{ $order } = { xml => $emod, type => 'custom' };
             }
-            $mod = $mod_info->{'ob'};
-            $mod->{'r'} = $r; $mod->{'session'} = $session; # Note we are just copying 'init' into all of these
-            if( $name eq 'log' ) { $log = $mod; }
-        }
-        else {
-            {
-                no strict 'refs';
-                my $hash = \%{"$modpath\::"};
-                if( !$hash->{'new'} ) {
-                    $log->error( text => "$modpath is not built in");
-                    next BT;
+            else {
+                my $imod = $mod_by_order{ $order };
+                my $a = $imod->{'xml'};
+                my $b = $emod;
+                if( $a && $b ) {
+                    mux( $a, $b );
+                }
+                else {
+                    $imod->{'xml'} = $a || $b;
                 }
             }
-            #my $newref = \&{"$modpath\::new"};
-            #$mod = $newref->( $modpath );
-            $mod = $modpath->new( obj => { _glob => $glob, _app => $app }, r => $r, session => $session ); # Don't use callback for builtins - #_callback => $callback, 
-            if( $name eq 'log' ) { $log = $mod; }
-            $type = 'default';
         }
-        $mod->init( conf => $xml->{ $name }, lev => 0 );
-        $modhash->{ $name } = $mod;
-        $log->note( text => "Loaded $type $name module" ) if( $log );
-    }    
+        else {
+            $mod_by_order{ ++$maxmod } = { xml => $emod, type => 'default' };
+        }
+    }
     
-    # where do I set the log so that stuff can get to it???? TODO TODO
-    $log = $glob->{'log'} = $modhash->{'log'};
+    my @listening;
     
-    # Register everything into the API
-                                                     
-    for my $mod_name ( @mod_names ) {
-        my $mod_info = $mod_hash{ $mod_name };
+    for( my $k=1;$k<=$maxmod;$k++ ) {
+        my $mod;
+        my $base     = $mod_by_order{ $k };
+        my $modxml   = $base->{'xml'};
+        my $type     = $base->{'type'};
+        my $mod_name = xval( $modxml->{'name'} );
+        my $file     = xval( $modxml->{'file'}, $mod_name );
+        my $call     = $modxml->{'call'};
+        my $listen   = $modxml->{'listen'};
+        
+        my $mod_info = { 
+            file   => $file, 
+            name   => $mod_name, 
+            call   => $call, 
+            listen => $listen, 
+            xml    => $modxml, 
+            type   => $type
+        };
+        
+        if( $modxml->{'listen'} ) {
+            push( @listening, $mod_info );
+        }
+        
         my $res = load_module( $glob, $mod_info, $app );
-        $mod_info->{'ob'}->{'r'} = $r; $mod_info->{'ob'}->{'session'} = $session;
-        if( !$res && $log ) {
-            $log->error( text => "Cannot load Module $mod_name" );
+        if( !$res ) {
+            if( $log ) {
+                $log->error( text => "Cannot load Module $mod_name - type: $type\n $@\n" ) 
+            }
+            else {
+                print "Cannot load Module $mod_name $file - type: $type\n $@\n";
+            }
             next;
         }
-        my $init = $mod_info->{'init'};
-        $log->note( text => "Loaded module: $mod_name, order=$init" );
-        $mod_info->{'ob'}->init( lev => 0 );
+        $mod = $mod_info->{'ob'};
+        $mod->{'r'} = $r; $mod->{'session'} = $session;
+        
+        if( !$mod_info->{'call'} ) {
+            $mod->init( conf => $modxml, lev => 0 ); # passing modxml here is redunant; it happens above
+        }
+        
+        if( $mod_name eq 'log' ) { 
+            $log = $glob->{'log'} = $mod;
+            my $inst_id = $log->server_start();
+            $app->{'inst_id'} = $inst_id;
+        }
+        $modhash->{ $mod_name } = $mod;
+        if( $log ) { 
+            $log->note( text => "Loaded $type $mod_name module" );
+        }
+        else {
+            print "Loaded $type $mod_name module\n";
+        }
     }
     
-    #$app->{'mods'} = \%modhash;
+    # Log should be loaded now; so go ahead and compile classes so we get errors right at the start
+    for my $classname ( keys %$classhash ) {
+        my $info = $classhash->{ $classname };
+        
+        my $file = $info->{'file'};
     
-    my $modes = forcearray( $xml->{'mode'} );
+        if( !$used_mods{ $file } ) {
+            eval("use $file;");
+            if( $@ ) { # was $! before
+                $log->error( text => "Error loading $file - $@" );
+            }
+        }
+    }
+        
+    # Register everything into the API TODO
     
-    my %modehash;
-    for my $mode ( @$modes ) {
-        my $name = xval $mode->{'name'};
-        $modehash{ $name } = $mode;
+    if( @listening ) {
+        my $rpc = $modhash->{'rpc'};
+        if( !$rpc ) {
+            die "There are listening modules, but no rpc module setup";
+        }
+        my $msg = "The following modules are listening on RPC: ";
+        for my $mod_info ( @listening ) {
+            my $mod_name = $mod_info->{'name'};
+            $msg .= "$mod_name ";
+            $rpc->register_listener( modinfo => $modhash );
+        }
+        $log->note( text => $msg );
+        
+        $rpc->start_listening();
     }
     
-    if( $modehash{'default'} ) {
-        $app->runmode( mode => $modehash{'default'} );
+    if( $cur_mode ) {
+        $app->run_mode( mode => $cur_mode );
     }
     
-    #use Module::test;
-    #$core->create( "Module::test" );
+    $log->server_stop();
     
     return 0;
 }
 
-sub create_test {
-    my $virt = shift;
-    my $glob = shift;
-    my $mod = shift;
-    my $r = $virt->{'r'};
-    my $session = $virt->{'session'};
-    return $mod->new( obj => { _glob => $glob }, r => $r, session => $session, @_ );
-    #print "$r $session $parm\n";
+sub get_base {
+    my ( $core, $app ) = @_;
+    return $app->{'obj'}{'_glob'}{'conf'}{'base'}{'value'};
 }
 
-sub getmod {
+sub end {
     my ( $core, $app ) = @_;
-    #my $glob = $app->{'_glob'};
+    my $modhash = $app->{'obj'}{'modhash'};
+    for my $modname ( keys %$modhash ) {
+        my $mod = $modhash->{ $modname };
+        my $map = $mod->{'obj'}{'_map'};
+        $mod->end() if( $map->{'end'} );
+    }
+}
+
+sub get_mod {
+    my ( $core, $app ) = @_;
     
     my $modname = $core->get('mod');
-    return $app->{'modhash'}{ $modname } || die "Cannot find mod $modname\n";
+    my $req = $core->get('req');
+    
+    my $mod = $app->{'obj'}{'modhash'}{ $modname };
+    return $mod if( $mod );
+    
+    if( defined( $req ) && $req == 0 ) {
+    }
+    else {
+        confess( "Cannot find mod $modname\n" );
+    }
 }
 
-sub runmode {
+sub run_mode {
     my ( $core, $app ) = @_;
     my $mode = $core->get('mode');
     my $init = $mode->{'init'};
     my $calls = forcearray( $init->{'call'} );
-    #my $glob = $app->{'_glob'};
-    my $mods = $app->{'modhash'};
+    my $mods = $app->{'obj'}{'modhash'};
+    
+    my %datahash;
     for my $call ( @$calls ) {
         my $modname = xval $call->{'mod'};
         my $func = xval $call->{'func'};
-        #print "Running $func on $mod\n";
+        my $args = $call->{'args'};
+        my $arghash = $args ? simplify( $args ) : 0; # strip value references out of xml
+        fill_dollars( $arghash, \%datahash );
         
-        my $mod = $mods->{ $modname } or print "Cannot get module $modname";
-        my $funcref = $mod->$func();
+        my $mod = $mods->{ $modname } or confess( "Cannot get module $modname" );
+        if( $args ) { 
+            my $res = $mod->$func( %$arghash );
+            $datahash{'ret'} = $res;
+            if( ref( $res ) eq 'Class::Core::INNER' ) {
+                my $allres = $res->get_all_res();
+                mux( \%datahash, $allres );
+            }
+        }
+        else { $mod->$func(); }
     }
+}
+
+sub mux_dup {
+    my ( $a, $b ) = @_;
+    my $n = {};
+    for my $key ( keys %$a ) {
+        $n->{ $key } = $a->{ $key };
+    }
+    for my $key ( keys %$b ) {
+        my $src = $n->{ $key };
+        my $new = $b->{ $key };
+        if( $src && $new ) {
+            if( ref( $src ) eq 'ARRAY' ) {
+                if( ref( $new ) eq 'ARRAY' ) {
+                    push( @$src, @$new );
+                }
+                else {
+                    push( @$src, $new );
+                }
+            }
+        }
+        else {
+            $n->{ $key } = $b->{ $key };
+        }
+    }
+    return $n;
+}
+
+sub mux {
+    my ( $a, $b ) = @_;
+    for my $key ( keys %$b ) {
+        my $src = $a->{ $key };
+        my $new = $b->{ $key };
+        if( $src && $new ) {
+            if( ref( $src ) eq 'ARRAY' ) {
+                if( ref( $new ) eq 'ARRAY' ) {
+                    push( @$src, @$new );
+                }
+                else {
+                    push( @$src, $new );
+                }
+            }
+        }
+        else {
+            $a->{ $key } = $b->{ $key };
+        }
+    }
+}
+
+sub slurp {
+    my $filename = shift;
+    my $contents;
+    open( SLURP_FILE, $filename );
+    binmode( SLURP_FILE ); # This line is only needed on Windows Perl, to prevent the file being read in text mode
+    {
+        local $/ = undef; # turns off the line seperator
+        $contents = <SLURP_FILE>;
+    }
+    #my $buffer;
+    #while( read( SLURP_FILE, $buffer, 1000 ) and $contents .= $buffer ) {};
+    close( SLURP_FILE );
+    return $contents;
+}
+
+sub fill_dollars {
+    my ( $hash, $data ) = @_;
+    return if( ref( $hash ) ne 'HASH' );
+    for my $key ( keys %$hash ) {
+        my $val = $hash->{ $key };
+        my $ref = ref( $val );
+        if( $ref eq '' && $val =~ m/^\$(.+)$/ ) {
+            my $name = $1;
+            if( $name =~ m/^arg([0-9]+)$/ ) {
+                $hash->{ $key } = $ARGV[ $1 ];
+            }
+            else {
+                if( defined( $data->{ $name } ) ) {
+                    $hash->{ $key } = $data->{ $name };
+                }
+            }
+        }
+        elsif( $ref eq 'HASH' ) {
+            fill_dollars( $val );
+        }
+    }
+}
+
+sub simplify {
+    my ( $node, $maxdep, $dep ) = @_;
+    $dep ||= 0;
+    my $ref = ref( $node );
+    if( $ref eq 'ARRAY' ) {
+        return undef if( defined $maxdep && $dep > $maxdep );
+        my @ret;
+        for my $sub ( @$node ) {
+            my $val = simplify( $sub, $maxdep, $dep + 1 );
+            push( @ret, $val ) if( defined $val );
+        }
+        return \@ret;
+    }
+    if( $ref eq 'HASH' ) {
+        my %ret;
+        my $cnt = 0;
+        my @keys = keys %$node;
+        
+        if( ! defined $maxdep || $dep <= $maxdep ) {
+            for my $key ( @keys ) {
+                next if( $key eq 'value' || $key =~ m/^_/ );
+                $cnt++;
+                my $val = simplify( $node->{ $key }, $maxdep, $dep + 1 );
+                $ret{ $key } = $val if( defined $val );
+            }
+        }
+        if( $cnt == 0 ) {
+            return $node->{'value'};
+        }
+        return \%ret;
+    }
+    return $node;
 }
 
 sub load_module {
     my ( $glob, $info, $app ) = @_;
-    #print Dumper( $core );
     my $file = $info->{'file'};
-    eval("use Module::$file;");
-    if( $! ) {
-        return 0;
+    if( !$used_mods{ $file } ) {
+        eval("use $file;");
+        if( $@ ) { # was $! before
+            return 0;
+        }
     }
-    my $newref = \&{"Module::$file\::new"};
-    my $callback = ( $info->{'name'} eq 'log' ) ? 0 : \&check; # Don't do logging of custom log modules ( they are a special case )
-    $info->{'ob'} = $newref->( "Module::$file", obj => { _callback => $callback, _glob => $glob, _app => $app } );
+    $used_mods{ $file } = 1;
+    my $newref = \&{"$file\::new"};
+    my $type = $info->{'type'} || 'external';
+    if( !$info->{'name'} ) {
+        print Dumper( $info );
+        die "Module does not have a name";
+    }
+    my $callback = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&check; # Don't do logging of log module or internal modules
+    my $calldone = ( $info->{'name'} eq 'log' || $info->{'type'} eq 'internal' ) ? 0 : \&checkdone; # Don't do logging of log module or internal modules
+    my $call = $info->{'call'};
+    my $name = $info->{'name'};
+    
+    my $map = $app->{'namespace_map'};
+    $map->{ $file } = "m $name";
+    
+    $info->{'ob'} = $newref->( 
+        $file, 
+        obj => { 
+            _callback => $callback, 
+            _calldone => $calldone,
+            _glob     => $glob, 
+            _app      => $app,
+            _name     => $name
+        }, 
+        _call     => $call, 
+        _callfunc => \&call_func, 
+        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _xml      => $info->{'xml'}
+        );
     return 1;
+}
+
+sub get_namespace_map {
+    my ( $core, $app ) = @_;
+    return $app->{'namespace_map'};
+}
+
+sub load_class {
+    my ( $core, $app ) = @_;
+    my $glob = $app->{'obj'}{'_glob'};
+    my $mod = $core->get('mod');
+    my $r = $core->get('r');
+    my $session = $core->get('session');
+    my $parms = $core->get('parms') || {};
+       
+    my $classinfo = $glob->{'classinfo'};
+    my $info = $classinfo->{ $mod } or confess( "Cannot find class $mod" );
+    my $type = $info->{'type'} || 'external';
+    my $internal = ( $type eq 'internal' );
+    my $file = $info->{'file'};
+    
+    if( !$used_mods{ $file } ) {
+        my $name = $info->{'name'};
+        my $map = $app->{'namespace_map'};
+        $map->{ $file } = "c $name";
+        
+        eval("use $file;");
+        if( $@ ) { # was $! before
+            my $log = $app->get_mod( mod => 'log', req => 0 );
+            if( $log ) {
+                $log->error( text => "Error loading $file - $@" );
+            }
+            else {
+                print "Error loading $file - $@";
+            }
+            die;
+            #return 0;
+        }
+    }
+    $used_mods{ $file } = 1;
+    my $newref = \&{"$file\::new"};
+    my $callback = ( $internal ? 0 : \&check ); # Always do logging of class calls
+    my $calldone = ( $internal ? 0 : \&checkdone ); # Always do logging of class calls
+    return $newref->( 
+        $file, 
+        obj => { 
+            _callback => $callback, 
+            _calldone => $calldone,
+            _glob     => $glob, 
+            _app      => $app 
+        },
+        r => $r,
+        session => $session,
+        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _xml      => $info->{'xml'},
+        %$parms
+        );
+    
+    #return $mod->new( obj => { _glob => $glob }, r => $r, session => $session, @_ );
+}
+
+# This function needs to make a remote call
+sub call_func {
+    my ( $app, $call, $func, $xml ) = @_;
+    my $mod = xval $call->{'mod'};
+    my $port = xval $call->{'port'};
+    my $rpc = $app->{'obj'}{'modhash'}{'rpc'};
+    $rpc->call( xml => $xml, mod => $mod, func => $func );
 }
 
 sub check {
-    my ( $core, $virt, $func, $parms ) = @_;
+    my ( $core, $virt, $func, $parms, $callidref ) = @_;
+    
     my $obj = $virt->{'obj'};
     my $cls = $obj->{'_class'};
-    #print Dumper( $core );
     my $glob = $obj->{'_glob'};
-    $glob->{'log'}->note( text => "Function call - $cls\::$func" );
+    
+    
+    #$glob->{'log'}->noter( text => "fin - $cls\::$func", r => $virt->{'r'} );
+    #$virt->{'_callid'} = $glob->{'log'}->func_entry( [ $cls, $func, $virt->{'r'} ] );
+    my $r = $virt->{'r'};
+    if( $r && $r->{'dbid'} ) {
+        my $rid = $r->{'dbid'};
+        
+        #print "****\n";
+        #print "++    $cls $func $rid $$callidref\n";
+        $$callidref = $glob->{'log'}->func_entry( [ $cls, $func, $r->{'dbid'} ] );
+        
+    }
+    my $spec = $core->{'_funcspec'};
+    if( $spec->{'perms'} && $virt->{'r'} ) {
+        my $user_perms = $virt->{'r'}{'perms'};
+        my $func_perms = $spec->{'perms'};
+        for my $item ( @$func_perms ) {
+            if( !$user_perms->{ $item } ) {
+                $glob->{'log'}->error( text => "User does not have permission $item" );
+                return 0;
+            }
+        }
+    }
     return 1;
 }
 
-sub test {
-    print "test app core callback\n";
+sub checkdone {
+    my ( $core, $virt, $func, $parms, $callid ) = @_;
+    my $obj = $virt->{'obj'};
+    my $cls = $obj->{'_class'};
+    my $glob = $obj->{'_glob'};
+    
+    my $r = $virt->{'r'};
+    if( $r && $r->{'dbid'} ) {
+        my $rid = $r->{'dbid'};
+        #print "--    $cls $func $rid $callid\n";
+        $glob->{'log'}->func_exit( [ $cls, $func, $r->{'dbid'}, $callid ] ) if( defined $callid );
+    }
+    #$glob->{'log'}->noter( text => "fout - 
+    #$virt->{'_callid'} = $glob->{'log'}->func_exit( [ $cls, $func, $virt->{'r'} ] );
 }
 
 1;
@@ -358,9 +777,9 @@ to seperate the configuration of your application from the application code itse
 
     #!/usr/bin/perl -w
     use strict;
-    use Framework::Core;
+    use App::Core;
     
-    my $core = Framework::Core->new();
+    my $core = App::Core->new();
     $core->run( config => "config.xml" );
 
 =head3 config.xml
@@ -393,7 +812,7 @@ Such an xml file contains the following:
 
 =item * Configuration for each of your modules
 
-=item * Configuration for Framework::Core itself and the included modules
+=item * Configuration for App::Core itself and the included modules
 
 =item * A sequence of steps to be used when starting up an AppCore instance
 
@@ -412,20 +831,20 @@ until the long running request is finished. This will be fixed in the next versi
 
 =head2 Modules
 
-Note that in version 0.03 ( this version ) the following components are included in the base install of Framework::Core.
+Note that in version 0.03 ( this version ) the following components are included in the base install of App::Core.
 Note also that none of the following links currently have any detailed documentation. The next version should address this.
 
 =over 4
 
-=item * L<Framework::Core::Admin::Default>
+=item * L<App::Core::Admin::Default>
 
 An admin interface to see the state of a running AppCore, and various information about it's activity.
 
-=item * L<Framework::Core::Log::Default>
+=item * L<App::Core::Log::Default>
 
 A simple logging system that logs to the shell.
 
-=item * L<Framework::Core::Web::CookieMan::Default>
+=item * L<App::Core::Web::CookieMan::Default>
 
 A basic cookie handling module.
 
@@ -433,13 +852,13 @@ A basic cookie handling module.
 
 =over 4
 
-=item * L<Framework::Core::Web::Request::HTTP_Server_Simple>
+=item * L<App::Core::Web::Request::HTTP_Server_Simple>
 
 A module that uses L<HTTP::Server::Simple> in order to accept incoming requests directly.
 Note that this module will need L<HTTP::Server::Simple::CGI> to be installed in order for it to work.
 Also, using this module will redirect regular print statements to go through to a web request; which may be unexpected.
 
-=item * L<Framework::Core::Web::Request::Mongrel2>
+=item * L<App::Core::Web::Request::Mongrel2>
 
 A module that connects to a Mongrel2 server in order to accept incoming requests.
 Using this module, which is enabled by default, will require the following CPAN modules to be installed:
@@ -456,12 +875,12 @@ Using this module, which is enabled by default, will require the following CPAN 
 
 =back
 
-=item * L<Framework::Core::Web::Router::Default>
+=item * L<App::Core::Web::Router::Default>
 
 A basic routing module that allows modules to register routes against it so that different
 modules can handle different path requests into the system.
 
-=item * L<Framework::Core::Web::SessionMan::Default>
+=item * L<App::Core::Web::SessionMan::Default>
 
 A basic session management module that stores sessions in memory. Note session data stored through
 this module will be lost whenever the AppCore is restarted.
@@ -470,7 +889,7 @@ this module will be lost whenever the AppCore is restarted.
 
 =over 4
 
-=item * L<Framework::Core::Shared::Http_Server_Simple_Wrapper>
+=item * L<App::Core::Shared::Http_Server_Simple_Wrapper>
 
 =back
 
