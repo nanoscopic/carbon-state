@@ -1,4 +1,4 @@
-# App::Core::Permission::Manager::Default
+# Framework::Core::Permission::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Permission::Manager::Default - App::Core Component
+Framework::Core::Permission::Manager::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Permission::Manager::Default - App::Core Component
 
 =cut
 
-package App::Core::Permission::Manager::Default;
+package Framework::Core::Permission::Manager::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -235,11 +235,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

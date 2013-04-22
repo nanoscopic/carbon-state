@@ -1,4 +1,4 @@
-# App::Core::Request::IO::Virtual
+# Framework::Core::Request::IO::Virtual
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Request::IO::Virtual - App::Core Component
+Framework::Core::Request::IO::Virtual - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Request::IO::Virtual - App::Core Component
 
 =cut
 
-package App::Core::Request::IO::Virtual;
+package Framework::Core::Request::IO::Virtual;
 use strict;
 use ZMQ::LibZMQ3;
 use Class::Core 0.03 qw/:all/;
@@ -73,10 +73,10 @@ sub run {
             my $post = {};
             my $get = {};
             if( $req->{'post'} ) {
-                $post = App::Core::simplify( $req->{'post'} );
+                $post = Framework::Core::simplify( $req->{'post'} );
             }
             if( $req->{'get'} ) {
-                $get = App::Core::simplify( $req->{'get'} );
+                $get = Framework::Core::simplify( $req->{'get'} );
             }
             my $resp = $self->virtual_request( path => $path, post => $post, query => $get, cookies => $cookies );
             $cookies = $resp->get_res('cookies');
@@ -203,7 +203,7 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core> that handles created and sending virtual web requests.
+Component of L<Framework::Core> that handles created and sending virtual web requests.
 
 =head1 DESCRIPTION
 

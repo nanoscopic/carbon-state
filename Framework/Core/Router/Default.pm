@@ -1,4 +1,4 @@
-# App::Core::Router::Default
+# Framework::Core::Router::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Router::Default - App::Core Component
+Framework::Core::Router::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Router::Default - App::Core Component
 
 =cut
 
-package App::Core::Router::Default;
+package Framework::Core::Router::Default;
 use strict;
 use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
@@ -261,7 +261,7 @@ sub handle_group {
     my $groups = forcearray( $xml->{'group'} ); delete $xml->{'group'};
     my $folders = forcearray( $xml->{'folder'} ); delete $xml->{'folder'};
     my $new_conf = $xml;
-    my $mux = App::Core::mux_dup( $conf, $new_conf );
+    my $mux = Framework::Core::mux_dup( $conf, $new_conf );
     if( @$groups ) {
         for my $group ( @$groups ) {
             handle_group( $core, $self_src, $mux, $group );
@@ -281,7 +281,7 @@ sub handle_group {
 sub handle_route {
     my ( $core, $self_src, $conf, $route ) = @_;
     #$core->dumperx( 'conf', $conf );
-    my $mux = App::Core::mux_dup( $conf, $route );
+    my $mux = Framework::Core::mux_dup( $conf, $route );
     #$core->dumperx( 'conf muxed with route', $conf );
     # in theory the conf here should be a mux of all the parent confs
     #my $obj     = xval $conf->{'obj'};
@@ -290,9 +290,9 @@ sub handle_route {
     #my $bounce  = xval $conf->{'bounce'};
     #my $folder  = xval $conf->{'folder'};
     #my $extra   = xval $conf->{'extra'};
-    #if( $extra ) { $extra = App::Core::simplify( $extra ); }
+    #if( $extra ) { $extra = Framework::Core::simplify( $extra ); }
        
-    my $info = App::Core::simplify( $mux );
+    my $info = Framework::Core::simplify( $mux );
     
     my $tple = $self_src->{'tpl_engine'};
     if( $tple && $mux->{'tpl'} ) {
@@ -348,11 +348,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

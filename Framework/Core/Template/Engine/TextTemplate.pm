@@ -1,4 +1,4 @@
-# App::Core::Template::Engine::TextTemplate
+# Framework::Core::Template::Engine::TextTemplate
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Template::Engine::TextTemplate - App::Core Component
+Framework::Core::Template::Engine::TextTemplate - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Template::Engine::TextTemplate - App::Core Component
 
 =cut
 
-package App::Core::Template::Engine::TextTemplate;
+package Framework::Core::Template::Engine::TextTemplate;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Carp;
@@ -32,7 +32,7 @@ use vars qw/$VERSION/;
 use XML::Bare qw/forcearray xval/;
 $VERSION = "0.01";
 use Data::Dumper;
-use App::Core::Template::Default;
+use Framework::Core::Template::Default;
 
 # This module should be registered as tpl_engine in the configuration so that other modules can depend upon it properly
 
@@ -55,8 +55,8 @@ sub init {
     #$core->dumperx( 'tpls', $tpls );
     
     my $app = $core->get_app();
-    $app->register_class( name => 'tpl', file => 'App::Core::Template::Default' ); 
-    $app->register_class( name => 'dummy', file => 'App::Core::Template::Dummy' ); 
+    $app->register_class( name => 'tpl', file => 'Framework::Core::Template::Default' ); 
+    $app->register_class( name => 'dummy', file => 'Framework::Core::Template::Dummy' ); 
     
     $self->{'tpls'} = {};
     if( @$tpls ) {
@@ -189,11 +189,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

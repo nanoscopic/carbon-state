@@ -1,4 +1,4 @@
-# App::Core::Log::Default
+# Framework::Core::Log::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Log::Default - App::Core Component
+Framework::Core::Log::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Log::Default - App::Core Component
 
 =cut
 
-package App::Core::Log::Default;
+package Framework::Core::Log::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Term::ANSIColor qw/:constants color/;
@@ -45,7 +45,7 @@ sub init {
     
     if( $shared ) {
         my $app = $core->get_app();
-        $app->register_class( name => 'hash', file => 'App::Core::Data::LockedHashSet', type => 'internal' ); 
+        $app->register_class( name => 'hash', file => 'Framework::Core::Data::LockedHashSet', type => 'internal' ); 
         my $req_hash  = $self->{'hash_req'}  = $core->create('hash');
         my $inst_hash = $self->{'hash_inst'} = $core->create('hash');
         my $msg_hash  = $self->{'hash_msg'}  = $core->create('hash');
@@ -249,7 +249,7 @@ sub note {
         $file ||= ''; $line ||= '';
         $file =~ s|^[./]+||g; $file =~ s|\.pm$||g;
         next if( $file =~ m|^Class| );
-        next if( $file eq 'App/Core' );
+        next if( $file eq 'Framework/Core' );
         $trace .= "$file:$line,";
     }
     
@@ -347,11 +347,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

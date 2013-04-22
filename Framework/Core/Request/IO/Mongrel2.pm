@@ -1,4 +1,4 @@
-# App::Core::Request::IO::Mongrel2
+# Framework::Core::Request::IO::Mongrel2
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Request::IO::Mongrel2 - App::Core Component
+Framework::Core::Request::IO::Mongrel2 - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Request::IO::Mongrel2 - App::Core Component
 
 =cut
 
-package App::Core::Request::IO::Mongrel2;
+package Framework::Core::Request::IO::Mongrel2;
 use strict;
 use ZMQ::LibZMQ3;
 use Class::Core 0.03 qw/:all/;
@@ -457,7 +457,7 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core> that handles recieving web requests from Mongrel2 via ZeroMQ.
+Component of L<Framework::Core> that handles recieving web requests from Mongrel2 via ZeroMQ.
 
 =head1 DESCRIPTION
 

@@ -1,4 +1,4 @@
-# App::Core::Request::IO::HTTP_Server_Simple
+# Framework::Core::Request::IO::HTTP_Server_Simple
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Request::IO::HTTP_Server_Simple - App::Core Component
+Framework::Core::Request::IO::HTTP_Server_Simple - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,10 +24,10 @@ App::Core::Request::IO::HTTP_Server_Simple - App::Core Component
 
 =cut
 
-package App::Core::Request::IO::HTTP_Server_Simple;
+package Framework::Core::Request::IO::HTTP_Server_Simple;
 use strict;
 use Class::Core 0.03 qw/:all/;
-use App::Core::Shared::HTTP_Server_Simple_Wrapper;
+use Framework::Core::Shared::HTTP_Server_Simple_Wrapper;
 use Data::Dumper;
 
 use vars qw/$VERSION/;
@@ -44,7 +44,7 @@ sub run {
     $self->{'log'} = $app->get_mod( mod => 'log' );
     #print Dumper( $self->{'router'}{'route'} );
     #print Dumper( $self->{'router'} );
-    my $server = App::Core::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );
+    my $server = Framework::Core::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );
     $server->set_handler( \&go, $self );
     $server->run();
 }
@@ -66,11 +66,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

@@ -1,4 +1,4 @@
-# App::Core::Request::Default
+# Framework::Core::Request::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Request::Default - App::Core Component
+Framework::Core::Request::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Request::Default - App::Core Component
 
 =cut
 
-package App::Core::Request::Default;
+package Framework::Core::Request::Default;
 use Class::Core 0.03 qw/:all/;
 use Carp;
 use strict;

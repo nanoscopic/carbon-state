@@ -1,12 +1,12 @@
-App::Core
+Framework::Core
 ------------
 
 INSTALLATION
-  Download App-Core-latest.tar.gz and untar it:
-    % tar -xzf App-Core-latest.tar.gz
+  Download Framework-Core-latest.tar.gz and untar it:
+    % tar -xzf Framework-Core-latest.tar.gz
     
   Follow the standard steps for making and compiling a perl module:
-    % cd App-Core-X.XX ( X.XX = the latest version )
+    % cd Framework-Core-X.XX ( X.XX = the latest version )
     % perl Makefile.PL
     % make
     % make test

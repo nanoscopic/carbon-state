@@ -1,4 +1,4 @@
-# App::Core Framework
+# Framework::Core Framework
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core - Application framework built around Class::Core wrapper system
+Framework::Core - Application framework built around Class::Core wrapper system
 
 =head1 VERSION
 
@@ -26,13 +26,13 @@ App::Core - Application framework built around Class::Core wrapper system
 
 use lib '..';
 
-package App::Core::ClassCoreExtend;
+package Framework::Core::ClassCoreExtend;
 # The subroutines in this package extend the typical Class::Core::INNER ( aka $core )
 use Data::Dumper;
 
 sub get_modxml {
     my ( $a, $virt ) = @_;
-    return App::Core::simplify( $virt->{'xml'} );
+    return Framework::Core::simplify( $virt->{'xml'} );
 }
 sub get_mod {
     my ( $a, $virt, $name, $req ) = @_;
@@ -77,7 +77,7 @@ sub get_mode { my ( $a, $virt ) = @_;  return $virt->{'obj'}{'_app'}{'_mode'}; }
 sub dumperx {
     my ( $a, $virt, $name, $val, $dep ) = @_;
     my ($package, $filename, $line) = caller(1);
-    my $d = Data::Dumper->new( [App::Core::simplify( $val )] );
+    my $d = Data::Dumper->new( [Framework::Core::simplify( $val )] );
     $d->Maxdepth( $dep ) if( $dep );
     my $data = "XDump from $package #$line\n  $name:\n  " . $d->Dump();
     print $data;
@@ -127,7 +127,7 @@ sub requestify {
     return $dup;
 }
 
-package App::Core;
+package Framework::Core;
 use Class::Core qw/:all/;
 use XML::Bare qw/xval forcearray/;
 use strict;
@@ -204,7 +204,7 @@ sub run {
     
     my $thr = threads->self();
     $runthread = $thr->tid();
-    $SIG{'INT'} = 'App::Core::INT_handler';
+    $SIG{'INT'} = 'Framework::Core::INT_handler';
     
     my $conf_file = $core->get('config');
     my $core_file = $core->get('core') || 'core.xml';
@@ -235,7 +235,7 @@ sub run {
     $glob->{'classinfo'} ||= {};
     my $classhash = $glob->{'classinfo'};
     
-    my $basic_conf = App::Core::simplify( $xml );
+    my $basic_conf = Framework::Core::simplify( $xml );
     
     my $cclasses = forcearray( $cxml->{'class'} );
     if( @$cclasses ) {
@@ -630,7 +630,7 @@ sub load_module {
         }, 
         _call     => $call, 
         _callfunc => \&call_func, 
-        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _extend   => bless( {}, 'Framework::Core::ClassCoreExtend' ),
         _xml      => $info->{'xml'}
         );
     return 1;
@@ -687,7 +687,7 @@ sub load_class {
         },
         r => $r,
         session => $session,
-        _extend   => bless( {}, 'App::Core::ClassCoreExtend' ),
+        _extend   => bless( {}, 'Framework::Core::ClassCoreExtend' ),
         _xml      => $info->{'xml'},
         %$parms
         );
@@ -777,9 +777,9 @@ to seperate the configuration of your application from the application code itse
 
     #!/usr/bin/perl -w
     use strict;
-    use App::Core;
+    use Framework::Core;
     
-    my $core = App::Core->new();
+    my $core = Framework::Core->new();
     $core->run( config => "config.xml" );
 
 =head3 config.xml
@@ -812,7 +812,7 @@ Such an xml file contains the following:
 
 =item * Configuration for each of your modules
 
-=item * Configuration for App::Core itself and the included modules
+=item * Configuration for Framework::Core itself and the included modules
 
 =item * A sequence of steps to be used when starting up an AppCore instance
 
@@ -831,20 +831,20 @@ until the long running request is finished. This will be fixed in the next versi
 
 =head2 Modules
 
-Note that in version 0.03 ( this version ) the following components are included in the base install of App::Core.
+Note that in version 0.03 ( this version ) the following components are included in the base install of Framework::Core.
 Note also that none of the following links currently have any detailed documentation. The next version should address this.
 
 =over 4
 
-=item * L<App::Core::Admin::Default>
+=item * L<Framework::Core::Admin::Default>
 
 An admin interface to see the state of a running AppCore, and various information about it's activity.
 
-=item * L<App::Core::Log::Default>
+=item * L<Framework::Core::Log::Default>
 
 A simple logging system that logs to the shell.
 
-=item * L<App::Core::Web::CookieMan::Default>
+=item * L<Framework::Core::Web::CookieMan::Default>
 
 A basic cookie handling module.
 
@@ -852,13 +852,13 @@ A basic cookie handling module.
 
 =over 4
 
-=item * L<App::Core::Web::Request::HTTP_Server_Simple>
+=item * L<Framework::Core::Web::Request::HTTP_Server_Simple>
 
 A module that uses L<HTTP::Server::Simple> in order to accept incoming requests directly.
 Note that this module will need L<HTTP::Server::Simple::CGI> to be installed in order for it to work.
 Also, using this module will redirect regular print statements to go through to a web request; which may be unexpected.
 
-=item * L<App::Core::Web::Request::Mongrel2>
+=item * L<Framework::Core::Web::Request::Mongrel2>
 
 A module that connects to a Mongrel2 server in order to accept incoming requests.
 Using this module, which is enabled by default, will require the following CPAN modules to be installed:
@@ -875,12 +875,12 @@ Using this module, which is enabled by default, will require the following CPAN 
 
 =back
 
-=item * L<App::Core::Web::Router::Default>
+=item * L<Framework::Core::Web::Router::Default>
 
 A basic routing module that allows modules to register routes against it so that different
 modules can handle different path requests into the system.
 
-=item * L<App::Core::Web::SessionMan::Default>
+=item * L<Framework::Core::Web::SessionMan::Default>
 
 A basic session management module that stores sessions in memory. Note session data stored through
 this module will be lost whenever the AppCore is restarted.
@@ -889,7 +889,7 @@ this module will be lost whenever the AppCore is restarted.
 
 =over 4
 
-=item * L<App::Core::Shared::Http_Server_Simple_Wrapper>
+=item * L<Framework::Core::Shared::Http_Server_Simple_Wrapper>
 
 =back
 

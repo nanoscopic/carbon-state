@@ -1,4 +1,4 @@
-# App::Core::Permission::Method::Flatfile
+# Framework::Core::Permission::Method::Flatfile
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Permission::Method::Flatfile - App::Core Component
+Framework::Core::Permission::Method::Flatfile - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Permission::Method::Flatfile - App::Core Component
 
 =cut
 
-package App::Core::Permission::Method::Flatfile;
+package Framework::Core::Permission::Method::Flatfile;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -67,7 +67,7 @@ sub init {
     my $permhash = $self->{'permhash'} = {};
     for my $perm ( @$perms ) {
         my $name = xval $perm->{'name'};
-        $permhash->{ $name } = App::Core::simplify( $perm );
+        $permhash->{ $name } = Framework::Core::simplify( $perm );
     }
     
     my $groups = forcearray( $xml->{'group'} );
@@ -78,7 +78,7 @@ sub init {
     my $allgroups = $self->{'all_groups'} = {};
     
     for my $group ( @$groups ) {
-        my $sgroup = App::Core::simplify( $group );
+        my $sgroup = Framework::Core::simplify( $group );
         my $name = $sgroup->{'name'};
         $allgroups->{ $name } = $sgroup;
         
@@ -388,11 +388,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

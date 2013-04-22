@@ -1,4 +1,4 @@
-# App::Core::Request::Manager::Default
+# Framework::Core::Request::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Request::Manager::Default - App::Core Component
+Framework::Core::Request::Manager::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,18 +24,18 @@ App::Core::Request::Manager::Default - App::Core Component
 
 =cut
 
-package App::Core::Request::Manager::Default;
+package Framework::Core::Request::Manager::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
-use App::Core::Request::Default 0.01;
+use Framework::Core::Request::Default 0.01;
 use Date::Format;
 $VERSION = "0.02";
 
 sub init {
     my ( $core, $self ) = @_;
     my $app = $core->get_app();
-    $app->register_class( name => 'req', file => 'App::Core::Request::Default' ); 
+    $app->register_class( name => 'req', file => 'Framework::Core::Request::Default' ); 
 }
 
 my $rid = 0;
@@ -69,11 +69,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

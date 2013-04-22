@@ -1,4 +1,4 @@
-# App::Core::Template::Default
+# Framework::Core::Template::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Template::Default - App::Core Component
+Framework::Core::Template::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Template::Default - App::Core Component
 
 =cut
 
-package App::Core::Template::Default;
+package Framework::Core::Template::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -33,7 +33,7 @@ $VERSION = "0.01";
 use Data::Dumper;
 use Text::Template;
 
-# This is a App::Core class; -not- a App::Core module
+# This is a Framework::Core class; -not- a Framework::Core module
 
 our $spec = "<func name='init_request'/>";
 
@@ -41,8 +41,8 @@ sub construct {
     my ( $core, $self ) = @_;
     my $file = $self->{'file'}; # file is the actual file containing the template content
     my $xml = $self->{'base'}; # base is the base hash for static values to use in the template
-    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a app::core module name or a reference to a class::core object
-    #$self->{'src'} = App::Core::slurp( $self->{'file'} );
+    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a Framework::Core module name or a reference to a class::core object
+    #$self->{'src'} = Framework::Core::slurp( $self->{'file'} );
     $self->{'tpl'} = Text::Template->new( TYPE => 'FILE', SOURCE => $self->{'file'} );
     if( !$self->{'tpl'} ) {
         my $log = $core->get_mod('log');
@@ -63,7 +63,7 @@ sub set_vars {
     my ( $core, $self ) = @_;
     my $vars = $core->get('vars');
     $self->{'vars'} ||= {};
-    App::Core::mux( $self->{'vars'}, $vars );
+    Framework::Core::mux( $self->{'vars'}, $vars );
 }
 
 # This function should not be called outside of this module
@@ -117,7 +117,7 @@ sub sub_tpl {
             }
             if( $i == $len ) { # set the vars here
                 if( $sub_info->{'vars'} ) {
-                    App::Core::mux( $sub_info->{'vars'}, $vars );
+                    Framework::Core::mux( $sub_info->{'vars'}, $vars );
                 }
                 else {
                     $sub_info->{'vars'} = $vars;
@@ -140,7 +140,7 @@ sub sub_tpl {
             $ret = $tpl_info->{'tpl'} = $tple->start( name => $tpl );
         }
         else {
-            App::Core::mux( $tpl_info->{'vars'}, $vars );
+            Framework::Core::mux( $tpl_info->{'vars'}, $vars );
         }
         if( $mod ) {
             #$core->dumper( 'test', 'setting mod' );
@@ -236,11 +236,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

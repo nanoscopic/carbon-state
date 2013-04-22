@@ -1,4 +1,4 @@
-# App::Core::Template::Dummy
+# Framework::Core::Template::Dummy
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Template::Dummy - App::Core Component
+Framework::Core::Template::Dummy - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Template::Dummy - App::Core Component
 
 =cut
 
-package App::Core::Template::Dummy;
+package Framework::Core::Template::Dummy;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -33,7 +33,7 @@ $VERSION = "0.01";
 use Data::Dumper;
 use Text::Template;
 
-# This is a App::Core class; -not- a App::Core module
+# This is a Framework::Core class; -not- a Framework::Core module
 
 our $spec = "<func name='init_request'/>";
 
@@ -41,7 +41,7 @@ sub construct {
     my ( $core, $self ) = @_;
     my $file = $self->{'file'}; # file is the actual file containing the template content
     my $xml = $self->{'base'}; # base is the base hash for static values to use in the template
-    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a app::core module name or a reference to a class::core object
+    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a Framework::Core module name or a reference to a class::core object
 }
 
 sub init_request {
@@ -55,7 +55,7 @@ sub set_vars {
     my ( $core, $self ) = @_;
     my $vars = $core->get('vars');
     $self->{'vars'} ||= {};
-    App::Core::mux( $self->{'vars'}, $vars );
+    Framework::Core::mux( $self->{'vars'}, $vars );
 }
 
 # This function should not be called outside of this module
@@ -70,7 +70,7 @@ sub set_subhash {
 # This information needs to be used automatically by the 'run' function to pass the results of the
 #   templates being run into the templates being evaluated.
 sub sub_tpl {
-    return App::Core::Template::Default::sub_tpl( @_ );
+    return Framework::Core::Template::Default::sub_tpl( @_ );
 }
 
 # Run the template given a hash of data variables
@@ -149,11 +149,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

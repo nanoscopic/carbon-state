@@ -1,4 +1,4 @@
-# App::Core::File::Server::Default
+# Framework::Core::File::Server::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::File::Server::Default - App::Core Component
+Framework::Core::File::Server::Default - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::File::Server::Default - App::Core Component
 
 =cut
 
-package App::Core::File::Server::Default;
+package Framework::Core::File::Server::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -75,7 +75,7 @@ sub register_folders {
     my $session = xval $conf->{'session'};
     
     for my $folder ( @$folders ) {
-        my $mux = App::Core::mux_dup( $conf, $folder );
+        my $mux = Framework::Core::mux_dup( $conf, $folder );
         
         my $web = xval $mux->{'url'};
         my $sys = xval $mux->{'sys'};
@@ -146,7 +146,7 @@ sub handle_file_req {
             }
             $r->{'content_type'} = $ctype;
             
-            my $data = App::Core::slurp( $file );
+            my $data = Framework::Core::slurp( $file );
             
             #$r->out( text => $data );
             $r->{'body'} = $data;
@@ -172,11 +172,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 

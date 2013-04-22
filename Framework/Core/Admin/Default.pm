@@ -287,7 +287,7 @@ sub log {
         my $tid = $xml->{'tid'} || '';
         my $trace = $xml->{'trace'} || '';
         $trace =~ s/,/<br>/g;
-        if( $nocore && $trace =~ m|^App/Core| ) { next; }
+        if( $nocore && $trace =~ m|^Framework/Core| ) { next; }
         $out .= "<tr><td>$type</td><td>$text</td><td>$time</td><td>$dif</td><td>$rid</td><td>$trace</td><td>$tid</td></tr>";
     }
     $out .= "</table>";

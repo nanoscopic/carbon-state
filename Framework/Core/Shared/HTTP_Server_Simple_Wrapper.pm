@@ -1,4 +1,4 @@
-# App::Core::Shared::HTTP_Server_Simple_Wrapper
+# Framework::Core::Shared::HTTP_Server_Simple_Wrapper
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-App::Core::Shared::HTTP_Server_Simple_Wrapper - App::Core Component
+Framework::Core::Shared::HTTP_Server_Simple_Wrapper - Framework::Core Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ App::Core::Shared::HTTP_Server_Simple_Wrapper - App::Core Component
 
 =cut
 
-package App::Core::Shared::HTTP_Server_Simple_Wrapper;
+package Framework::Core::Shared::HTTP_Server_Simple_Wrapper;
 use base qw/HTTP::Server::Simple::CGI/;
 
 sub set_handler {
@@ -51,11 +51,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 DESCRIPTION
 
-Component of L<App::Core>
+Component of L<Framework::Core>
 
 =head1 LICENSE
 
