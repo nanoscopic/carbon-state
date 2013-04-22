@@ -1,0 +1,16 @@
+--- #YAML:1.0
+name:                XML-Bare
+version:             0.45
+abstract:            A minimal XML parser / schema checker / pretty-printer using C internally.
+license:             perl
+author:              
+    - David Helkowski <cpan@codechild.com>
+generated_by:        ExtUtils::MakeMaker version 6.44
+distribution_type:   module
+requires:     
+    Carp:                          0
+    DynaLoader:                    0
+    Exporter:                      0
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3
