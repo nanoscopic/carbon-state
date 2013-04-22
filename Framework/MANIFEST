@@ -1,0 +1,15 @@
+Core.pm
+Changes
+Makefile.PL
+MANIFEST
+META.yml
+README
+Core/Admin/Default.pm
+Core/Log/Default.pm
+Core/Shared/HTTP_Server_Simple_Wrapper.pm
+Core/Web/CookieMan/Default.pm
+Core/Web/Request/HTTP_Server_Simple.pm
+Core/Web/Request/Mongrel2.pm
+Core/Web/Router/Default.pm
+Core/Web/SessionMan/Default.pm
+META.json                                Module JSON meta-data (added by MakeMaker)

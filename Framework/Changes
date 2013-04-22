@@ -1,0 +1,7 @@
+Framework::Core Changelog
+
+0.02 ( 4-23-13 )
+  - Rename to Framework::Core prior to 0.03
+  - Removed dependency on old version of XML::Bare module, now that the latest version, 0.48, is compatible
+0.01 ( 2-14-13 )
+  - First release ( as App::Core )
