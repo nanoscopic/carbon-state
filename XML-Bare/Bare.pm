@@ -9,7 +9,7 @@ require DynaLoader;
 @ISA = qw(Exporter DynaLoader);
 
 
-$VERSION = "0.45";
+$VERSION = "0.48";
 
 
 use vars qw($VERSION *AUTOLOAD);
@@ -28,7 +28,7 @@ XML::Bare - Minimal XML parser implemented via a C state engine
 
 =head1 VERSION
 
-0.45
+0.48
 
 =cut
 

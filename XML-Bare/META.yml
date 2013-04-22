@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                XML-Bare
-version:             0.45
+version:             0.48
 abstract:            A minimal XML parser / schema checker / pretty-printer using C internally.
 license:             perl
 author:              
