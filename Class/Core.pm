@@ -201,15 +201,22 @@ sub AUTOLOAD {
     bless $inner, "Class::Core::INNER";
     my $callback = $obj->{'_callback'};
     my $calldone = $obj->{'_calldone'};
+    if( $callback && !$calldone ) { die "wtf"; }
+    if( !$callback && $calldone ) { die "wtf"; }
     
     my $okay = 1;
+    my $callid = 0;
     if( $callback ) {
         # inner contains call parameters
         # virt is the virtual wrapper around the object
-        $okay = &$callback( $inner, $virt, $tocall, \%parms );
+        
+        $okay = &$callback( $inner, $virt, $tocall, \%parms, \$callid );
     }
     if( !$okay ) {
         #die "Call to $tocall in $cls failed due to callback\n";
+        if( $calldone ) {
+            &$calldone( $inner, $virt, $tocall, \%parms, $callid );
+        }
         return 0;
     }
     
@@ -224,7 +231,7 @@ sub AUTOLOAD {
     }
     
     if( $calldone ) {
-        &$calldone( $inner, $virt, $tocall, \%parms );
+        &$calldone( $inner, $virt, $tocall, \%parms, $callid );
     }
     
     return $inner->{'res'} ? $inner : $inner->{'ret'};
