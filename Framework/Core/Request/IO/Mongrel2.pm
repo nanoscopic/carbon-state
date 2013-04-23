@@ -301,7 +301,8 @@ sub handle_request {
         postvars => $postvars,
         id => $id,
         ip => $hash->{'x-forwarded-for'},
-        type => $type );
+        type => $type # either 'post', 'get', or 'disconnect_notice'
+        );
     $log->{'r'} = $r;
     
     $log->note( text => "Recieved request to $path");

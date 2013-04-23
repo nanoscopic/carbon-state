@@ -115,18 +115,22 @@ sub route {
     my $tple = 0;
     while( @parts ) {
         my $joined = join('/', @parts );
-        #$log->note( text => "Testing $joined" );
         my $route;
         if( $route = $rs->{ $joined } ) {
+            my $leftover = $opath;
+            $leftover =~ s|^/?$joined||g;
+            $r->{'leftover'} = $leftover;
+            print "joined: $joined, leftover: $leftover\n";
+            
             my $set = $route->{'set'};
             my $info;
             for my $ainfo ( @$set ) {
                 if( $ainfo->{'regex'} ) {
-                    my $x = $opath;
-                    $x =~ s|^/?$joined||g;
-                    #$log->note( text => "Checking $x against regex" );
-                    if( $x =~ $ainfo->{'regex'} ) {
+                    if( $leftover =~ $ainfo->{'regex'} ) {
                         $info = $ainfo;
+                    }
+                    else {
+                        $log->note( text => "$leftover does not match ".$ainfo->{'regex'} );
                     }
                 }
                 else {
@@ -140,7 +144,7 @@ sub route {
                 my $session_name = $info->{'session'} || 'DEFAULT';
                 my $perm = $self->{'src'}{'sesshash'}{ $session_name };
                 if( !$perm ) {
-                    use Data::Dumper;
+                    eval('use Data::Dumper');
                     $Data::Dumper::Maxdepth = 2;
                     print Dumper( $self->{'src'} );
                     die "No map from session $session_name to perm module";
@@ -198,6 +202,9 @@ sub route {
                 $resolved = 1;
                 $r->log_end();
                 last;
+            }
+            else {
+                $log->error( text => "Match but regex fail" );
             }
         }
         $full = 0;
@@ -329,8 +336,10 @@ sub route_path {
     $parms{'folder'} = $parms{'file'} ? 0 : 1;
     
     #print "Adding path to $path\n";
+    my $log = $core->get_mod('log');
     my $routes = $self_src->{'path_routes'};
     my $path = $parms{'path'};
+    $log->note( text => "Routing $path to ".$parms{'obj'}."-".$parms{'func'} );
     if( $routes->{ $path } ) {
         my $set = $routes->{ $path }{'set'};
         push( @$set, \%parms );

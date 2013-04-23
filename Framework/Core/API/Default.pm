@@ -39,8 +39,9 @@ sub init {
     my $base = $self->{'base'} = xval( $core->get_conf()->{'base'}, 'api' );
     my $sess_name = $self->{'sess_name'} = xval( $core->get_conf()->{'session'}, 'APP' );
     #my $router = $core->get_mod( 'web_router' );
-    #$router->route_path( path => $base, obj => 'core_api', func => 'api_call', session => 'APP' );
+    #$router->route_path( path => $base, obj => 'api', func => 'api_call', session => 'APP' );
     $self->{'group_hash'} = {};
+    $self->{'path_hash'} = {};
 }
 
 sub api_call {
@@ -115,6 +116,8 @@ sub register_via_spec {
     #$core->dumper( "Funcs", $funcs );
     
     my $router = $core->get_mod( 'web_router' );
+
+    my $pathhash = $self->{'path_hash'};
     
     for my $funcname ( @$fref ) {
         my $func = $funcs->{ $funcname };
@@ -146,12 +149,35 @@ sub register_via_spec {
                 my $path = "api/$gpname/$v/$apiname";
                 $log->note( text => "API Register $session - $path -> $modname/$funcname($modshort)" );
                 $apinames->{ $apiname } = { session => $session, mod => $mod, func => $funcname };
-                $router->route_path( path => $path, obj => 'core_api', func => 'handle_api_call', session => $session, file => 1, extra => { mod => $modshort, func => $funcname } );
+                $router->route_path( path => $path, obj => 'api', func => 'handle_api_call', session => $session, file => 1, extra => { mod => $modshort, func => $funcname } );
+                $pathhash->{ $path } = {
+                    session => $session,
+                    mod => $modshort,
+                    func => $funcname
+                };
                 # todo enable bouncing from api locations
             }
             # example function registration: <api v='1,2' name='apiname'/>
         }
     }
+}
+
+sub call {
+    my ( $core, $self ) = @_;
+    my $parms = $core->get_all();
+    my $path = $parms->{'path'};
+    # in theory subpath is passed
+    my $src = $self->{'src'};
+    my $pathhash = $src->{'path_hash'};
+    my $info = $pathhash->{ $path };
+    if( !$info ) {
+        my $log = $core->get_mod('log');
+        $log->error( text => "Cannot find a registered api path '$path'" );
+        $core->dumper( "Available paths", $pathhash );
+    }
+    my $mod = $core->get_mod( $info->{'mod'} );
+    my $func = $info->{'func'};
+    return $mod->$func( %$parms );
 }
 
 sub handle_api_call {
@@ -160,7 +186,9 @@ sub handle_api_call {
     my $modname = $core->get('mod');
     my $mod = $r->get_mod( mod => $modname );
     my $func = $core->get('func');
-    my $data = $mod->$func();
+    my $params = $self->parse_params();
+    return if( $r->{'type'} eq 'disconnect_notice' );
+    my $data = $mod->$func( %$params );
     #$core->dumper( 'data', $data );
     
     my $url = $r->{'path'};
@@ -181,7 +209,24 @@ sub handle_api_call {
         my $json = JSON->new->pretty;
         $r->out( text => $json->encode( $data ) );
     }
-    
+}
+
+sub parse_params {
+    my ( $core, $self ) = @_;
+    my $r = $self->{'r'};
+    my $type = $r->{'type'};
+    my %parms;
+    if( $type eq 'post' ) {
+      %parms = ( %{$r->{'postvars'}} );  
+    }
+    if( $type eq 'get' ) {
+      %parms = ( %{$r->{'query'}} );
+    }
+    $parms{'subpath'} = $r->{'leftover'};
+    return \%parms;
+    #    path => $path,
+    #    id => $id,
+    #    ip => $hash->{'x-forwarded-for'},
 }
 
 sub register_function {

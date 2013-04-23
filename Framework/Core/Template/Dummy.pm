@@ -48,7 +48,7 @@ sub init_request {
     my ( $core, $self ) = @_;
     #$template = Text::Template->new(TYPE => 'STRING', SOURCE => '...' );
     $self->{'vars'} = 0;
-    $self->{'tpls'} = {}; # named templates to use
+    my %tpls; tie( %tpls, 'Tie::IxHash' ); $self->{'tpls'} = \%tpls; # named templates to use
 }
 
 sub set_vars {

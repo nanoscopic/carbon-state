@@ -658,6 +658,9 @@ sub load_class {
     if( !$used_mods{ $file } ) {
         my $name = $info->{'name'};
         my $map = $app->{'namespace_map'};
+        if( !$name ) {
+            $name = $info->{'xml'}{'name'}{'value'};
+        }
         $map->{ $file } = "c $name";
         
         eval("use $file;");

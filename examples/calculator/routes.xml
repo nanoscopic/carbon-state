@@ -6,5 +6,5 @@
         <route path='calc' func='home'><tpl name='calc'/></route>
     </group>
     <fileroot></fileroot>
-    <folder url='static' sys='static' match='\.jpg$'/>
+    <folder url='static' sys='static' match='(jpg|png)$' cache='4h'/>
 </xml>

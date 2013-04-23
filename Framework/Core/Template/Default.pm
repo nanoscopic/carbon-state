@@ -32,6 +32,7 @@ use XML::Bare qw/forcearray xval/;
 $VERSION = "0.01";
 use Data::Dumper;
 use Text::Template;
+use Tie::IxHash;
 
 # This is a Framework::Core class; -not- a Framework::Core module
 
@@ -56,7 +57,7 @@ sub init_request {
     my ( $core, $self ) = @_;
     #$template = Text::Template->new(TYPE => 'STRING', SOURCE => '...' );
     $self->{'vars'} = 0;
-    $self->{'tpls'} = {}; # named templates to use
+    my %tpls; tie( %tpls, 'Tie::IxHash' ); $self->{'tpls'} = \%tpls; # named templates to use
 }
 
 sub set_vars {
@@ -106,7 +107,8 @@ sub sub_tpl {
         for( my $i=1;$i<=$len;$i++ ) {
             my $subs = $cur_info->{'subs'};
             if( !$subs ) {
-                $subs = $cur_info->{'subs'} = {};
+                my %subs; tie( %subs, 'Tie::IxHash' );
+                $subs = $cur_info->{'subs'} = \%subs;
             }
             my $sub_name = shift @parts;
             my $sub_info = $subs->{ $sub_name };
