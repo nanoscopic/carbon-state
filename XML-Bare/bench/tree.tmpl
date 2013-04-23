@@ -11,6 +11,14 @@ require XML::Bare;
 my $ob = new XML::Bare( file => $file );
 my $root = $ob->simple();
 
+#- XML::Fast
+require XML::Fast;
+$/ = undef;
+open( FILE, $file );
+my $text = <FILE>;
+close( FILE );
+my $hash = XML::Fast::xml2hash( $text );
+
 #-
 require XML::TreePP;
 my $tpp = XML::TreePP->new();
