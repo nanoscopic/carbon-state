@@ -20,7 +20,7 @@ char *rootpos;
 
 //#define DEBUG
   
-SV *cxml2obj( struct nodec *rootnode, struct nodec *curnode ) {
+SV *cxml2obj( struct parserc *parser, struct nodec *curnode ) {
   HV *output = newHV(); // the root
   SV *outputref = newRV_noinc( (SV *) output ); // return a reference to the root
   int i; // loop index; defined at the top because this is C
@@ -104,7 +104,7 @@ SV *cxml2obj( struct nodec *rootnode, struct nodec *curnode ) {
       }
       
       if( !cur ) {
-        SV *ob = cxml2obj( rootnode, curnode );
+        SV *ob = cxml2obj( parser, curnode );
         hv_store( output, curnode->name, curnode->namelen, ob, 0 );
       }
       else { // there is already a node stored with this name
@@ -117,17 +117,17 @@ SV *cxml2obj( struct nodec *rootnode, struct nodec *curnode ) {
           hv_delete( output, curnode->name, curnode->namelen, 0 );
           hv_store( output, curnode->name, curnode->namelen, newarrayref, 0 );
           av_push( newarray, newref );
-          ob = cxml2obj( rootnode, curnode );
+          ob = cxml2obj( parser, curnode );
           av_push( newarray, ob );
         }
         else if( cur_type == SVt_PVAV ) {
           AV *av = (AV *) SvRV( *cur );
-          SV *ob = cxml2obj( rootnode, curnode );
+          SV *ob = cxml2obj( parser, curnode );
           av_push( av, ob );
         }
         else {
           // something else; probably an existing value node; just wipe it out
-          SV *ob = cxml2obj( rootnode, curnode );
+          SV *ob = cxml2obj( parser, curnode );
           hv_store( output, curnode->name, curnode->namelen, ob, 0 );
         }
       }
@@ -156,7 +156,7 @@ SV *cxml2obj( struct nodec *rootnode, struct nodec *curnode ) {
   return outputref;
 }
 
-SV *cxml2obj_simple( struct nodec *rootnode, struct nodec *curnode ) {
+SV *cxml2obj_simple( struct parserc *parser, struct nodec *curnode ) {
   int i;
   struct attc *curatt;
   int numatts = curnode->numatt;
@@ -208,7 +208,7 @@ SV *cxml2obj_simple( struct nodec *rootnode, struct nodec *curnode ) {
       }
         
       if( !cur ) {
-        SV *ob = cxml2obj_simple( rootnode, curnode );
+        SV *ob = cxml2obj_simple( parser, curnode );
         hv_store( output, curnode->name, curnode->namelen, ob, 0 );
       }
       else {
@@ -220,11 +220,11 @@ SV *cxml2obj_simple( struct nodec *rootnode, struct nodec *curnode ) {
             hv_delete( output, curnode->name, curnode->namelen, 0 );
             hv_store( output, curnode->name, curnode->namelen, newarrayref, 0 );
             av_push( newarray, newref );
-            av_push( newarray, cxml2obj_simple( rootnode, curnode ) );
+            av_push( newarray, cxml2obj_simple( parser, curnode ) );
           }
           else {
             AV *av = (AV *) SvRV( *cur );
-            av_push( av, cxml2obj_simple( rootnode, curnode ) );
+            av_push( av, cxml2obj_simple( parser, curnode ) );
           }
         }
         else {
@@ -239,7 +239,7 @@ SV *cxml2obj_simple( struct nodec *rootnode, struct nodec *curnode ) {
           av_push( newarray, newsv );
           hv_delete( output, curnode->name, curnode->namelen, 0 );
           hv_store( output, curnode->name, curnode->namelen, newarrayref, 0 );
-          av_push( newarray, cxml2obj_simple( rootnode, curnode ) );
+          av_push( newarray, cxml2obj_simple( parser, curnode ) );
         }
       }
       if( i != ( length - 1 ) ) curnode = curnode->next;
@@ -283,33 +283,49 @@ SV *cxml2obj_simple( struct nodec *rootnode, struct nodec *curnode ) {
   return outputref;
 }
 
+void init_hashes() {
+  PERL_HASH(vhash, "value", 5);
+  PERL_HASH(ahash, "_att", 4);
+  PERL_HASH(chash, "comment", 7);
+  PERL_HASH(phash, "_pos", 4);
+  PERL_HASH(ihash, "_i", 2 );
+  PERL_HASH(zhash, "_z", 2 );
+  PERL_HASH(cdhash, "_cdata", 6 );
+}
+
 MODULE = XML::Bare         PACKAGE = XML::Bare
 
 SV *
-xml2obj( rootsv, cursv )
-  SV *rootsv
-  SV *cursv
+xml2obj( parsersv )
+  SV *parsersv
   CODE:
-    struct nodec *rootnode;
-    rootnode = INT2PTR( struct nodec *, SvUV( rootsv ) );
-    struct nodec *curnode;
-    curnode = INT2PTR( struct nodec *, SvUV( cursv ) );
-    if( curnode->err ) RETVAL = newSViv( curnode->err );
-    else RETVAL = cxml2obj( rootnode, curnode );
+    struct parserc *parser;
+    parser = INT2PTR( struct parserc *, SvUV( parsersv ) );
+    if( parser->err ) RETVAL = newSViv( parser->err );
+    else RETVAL = cxml2obj( parser, parser->rootnode );
   OUTPUT:
     RETVAL
     
 SV *
-xml2obj_simple( rootsv, cursv )
-  SV *rootsv
-  SV *cursv
+xml2obj_simple( parsersv )
+  SV *parsersv
   CODE:
     PERL_HASH( content_hash, "content", 7 );
-    struct nodec *rootnode;
-    rootnode = INT2PTR( struct nodec *, SvUV( rootsv ) );
-    struct nodec *curnode;
-    curnode = INT2PTR( struct nodec *, SvUV( cursv ) );
-    RETVAL = cxml2obj_simple( rootnode, curnode );
+    struct parserc *parser;
+    parser = INT2PTR( struct parserc *, SvUV( parsersv ) );
+    if( parser->err ) RETVAL = newSViv( parser->err );
+    else RETVAL = cxml2obj_simple( parser, parser->rootnode );
+  OUTPUT:
+    RETVAL
+
+SV *
+c_parse_more( text, parsersv )
+  char * text
+  SV *parsersv
+  CODE:
+    struct parserc *parser = INT2PTR( struct parserc *, SvUV( parsersv ) );
+    int err = parserc_parse( parser, text );
+    RETVAL = newSVuv( PTR2UV( parser ) );
   OUTPUT:
     RETVAL
 
@@ -317,21 +333,28 @@ SV *
 c_parse(text)
   char * text
   CODE:
-    rootpos = text;
-    PERL_HASH(vhash, "value", 5);
-    PERL_HASH(ahash, "_att", 4);
-    PERL_HASH(chash, "comment", 7);
-    PERL_HASH(phash, "_pos", 4);
-    PERL_HASH(ihash, "_i", 2 );
-    PERL_HASH(zhash, "_z", 2 );
-    PERL_HASH(cdhash, "_cdata", 6 );
+    init_hashes();
+    
     struct parserc *parser = (struct parserc *) malloc( sizeof( struct parserc ) );
-    struct nodec *root = parserc_parse( parser, text );
-    free( parser );
-    RETVAL = newSVuv( PTR2UV( root ) );
+    parser->last_state = 0;
+    int err = parserc_parse( parser, text );
+    RETVAL = newSVuv( PTR2UV( parser ) );
   OUTPUT:
     RETVAL
+
+SV *
+c_parse_unsafely(text)
+  char * text
+  CODE:
+    init_hashes();
     
+    struct parserc *parser = (struct parserc *) malloc( sizeof( struct parserc ) );
+    parser->last_state = 0;
+    int err = parserc_parse_unsafely( parser, text );
+    RETVAL = newSVuv( PTR2UV( parser ) );
+  OUTPUT:
+    RETVAL
+
 SV *
 c_parsefile(filename)
   char * filename
@@ -340,13 +363,7 @@ c_parsefile(filename)
     unsigned long len;
     FILE *handle;
     
-    PERL_HASH(vhash, "value", 5);
-    PERL_HASH(ahash, "_att", 4);
-    PERL_HASH(chash, "comment", 7);
-    PERL_HASH(phash, "_pos", 4);
-    PERL_HASH(ihash, "_i", 2 );
-    PERL_HASH(zhash, "_z", 2 );
-    PERL_HASH(cdhash, "_cdata", 6 );
+    init_hashes();
     
     handle = fopen(filename,"r");
     
@@ -360,16 +377,19 @@ c_parsefile(filename)
     fread( data, 1, len, handle );
     fclose( handle );
     struct parserc *parser = (struct parserc *) malloc( sizeof( struct parserc ) );
-    struct nodec *root = parserc_parse( parser, data );
-    free( parser );
-    RETVAL = newSVuv( PTR2UV( root ) );
+    parser->last_state = 0;
+    int err = parserc_parse( parser, data );
+    //free( parser );
+    RETVAL = newSVuv( PTR2UV( parser ) );
   OUTPUT:
     RETVAL
 
 void
-free_tree_c( rootsv )
-  SV *rootsv
+free_tree_c( parsersv )
+  SV *parsersv
   CODE:
-    struct nodec *rootnode;
-    rootnode = INT2PTR( struct nodec *, SvUV( rootsv ) );
+    struct parserc *parser;
+    parser = INT2PTR( struct parserc *, SvUV( parsersv ) );
+    struct nodec *rootnode = parser->rootnode;
     del_nodec( rootnode ); // note this frees the pointer as well
+    free( parser );
