@@ -7,7 +7,7 @@ use utf8;
 require Exporter;
 require DynaLoader;
 @ISA = qw(Exporter DynaLoader);
-$VERSION = "0.50";
+$VERSION = "0.51";
 use vars qw($VERSION *AUTOLOAD);
 
 *AUTOLOAD = \&XML::Bare::AUTOLOAD;
@@ -22,7 +22,7 @@ XML::Bare - Minimal XML parser implemented via a C state engine
 
 =head1 VERSION
 
-0.50
+0.51
 
 =cut
 
@@ -40,19 +40,21 @@ sub new {
     }
   }
   else {
-    my $res = open( XML, $self->{ 'file' } );
+    my $res = open( my $XML, $self->{ 'file' } );
     if( !$res ) {
       $self->{ 'xml' } = 0;
       return 0;
     }
     {
       local $/ = undef;
-      $self->{'text'} = <XML>;
+      $self->{'text'} = <$XML>;
     }
-    close( XML );
+    close( $XML );
     $self->{'parser'} = XML::Bare::c_parse( $self->{'text'} );
   }
-  bless $self, 'XML::Bare::Object';
+  my $n = "XML::Bare";
+  bless $self, $n;
+  undef $n;
   return $self if( !wantarray );
   return ( $self, ( $self->{'simple'} ? $self->simple() : $self->parse() ) );
 }
@@ -61,7 +63,7 @@ sub simple {
     return new( @_, simple => 1 );
 }
 
-package XML::Bare::Object;
+package XML::Bare;
 
 use Carp;
 use strict;
@@ -72,8 +74,12 @@ sub find_node { shift; return XML::Bare::find_node( @_ ); }
 
 sub DESTROY {
   my $self = shift;
-  undef $self->{'xml'};
+  use Data::Dumper;
+  #print Dumper( $self );
+  undef $self->{'text'};
+  undef $self->{'i'};
   $self->free_tree();
+  undef $self->{'parser'};
 }
 
 sub read_more {
@@ -101,7 +107,7 @@ sub parse {
     readxbs( $ob );
   }
   
-  if( $res < 0 ) { croak "Error at ".$self->lineinfo( -$res ); }
+  if( !ref( $res ) && $res < 0 ) { croak "Error at ".$self->lineinfo( -$res ); }
   $self->{ 'xml' } = $res;
   
   if( defined( $self->{'xbso'} ) ) {
@@ -199,10 +205,10 @@ sub simple {
   
   my $res = XML::Bare::xml2obj_simple( $self->{'parser'} );#$self->xml2obj();
   
-  if( $res < 0 ) { croak "Error at ".$self->lineinfo( -$res ); }
+  if( !ref( $res ) && $res < 0 ) { croak "Error at ".$self->lineinfo( -$res ); }
   $self->{ 'xml' } = $res;
   
-  return $self->{ 'xml' };
+  return $res;
 }
 
 sub add_node {
@@ -303,21 +309,21 @@ sub save {
   }
   return if( !$len );
   
-  open  F, '>:utf8', $self->{ 'file' };
-  print F $xml;
+  open( my $F, '>:utf8', $self->{ 'file' } );
+  print $F $xml;
   
-  seek( F, 0, 2 );
-  my $cursize = tell( F );
+  seek( $F, 0, 2 );
+  my $cursize = tell( $F );
   if( $cursize != $len ) { # concurrency; we are writing a smaller file
     warn "Truncating File $self->{'file'}";
     truncate( F, $len );
   }
-  seek( F, 0, 2 );
-  $cursize = tell( F );
+  seek( $F, 0, 2 );
+  $cursize = tell( $F );
   if( $cursize != $len ) { # still not the right size even after truncate??
     die "Write problem; $cursize != $len";
   }
-  close F;
+  close $F;
 }
 
 sub xml {
@@ -1156,7 +1162,7 @@ html. [root node name] is optional.
 =item * C<< $object->save() >>
 
 The the current tree in the object, cleanly indent it, and save it
-to the file paramter specified when creating the object.
+to the file parameter specified when creating the object.
 
 =item * C<< $value = xval $node, $default >>
 
@@ -1420,7 +1426,7 @@ the two strings together and then reading all the XML in at once.
 
 =item * C<< check() checkone() readxbs() free_tree_c() >>
 
-=item * C<< lineinfo() c_parse() c_parse_more() c_parsefile() free_tree() xml2obj() >>
+=item * C<< lineinfo() c_parse() c_parse_unsafely() c_parse_more() c_parsefile() free_tree() xml2obj() >>
 
 =item * C<< obj2xml() get_root() obj2html() xml2obj_simple() >>
 
