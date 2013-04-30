@@ -5,6 +5,19 @@ use strict;
 use Class::Core qw/:all/;
 use Data::Dumper;
 
+use vars qw( $VERSION );
+$VERSION = "0.01";
+
+=head1 NAME
+
+Set::Definition - Class to handle simple logical set unions and intersections.
+
+=head1 VERSION
+
+0.01
+
+=cut
+
 sub construct {
     my ( $core, $def ) = @_;
     my $text  = $def->{'text'};
@@ -228,3 +241,17 @@ sub treat_arr {
 }
 
 1;
+
+__END__
+
+=head1 SYNOPSIS
+
+  use Set::Definition;
+  
+  my $hash = { a => 1 };
+  my $set = Set::Definition->new( text => $sgroup->{'define'}, ingroup_callback => \&in_group, hash => $hash );
+  
+  sub in_group {
+    my ( $group_name, $item, $options ) = @_;
+    my $hash = $options->{'hash'};
+  }
