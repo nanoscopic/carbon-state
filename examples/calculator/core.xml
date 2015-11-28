@@ -8,7 +8,8 @@
         <module name='session_man' file='Framework::Core::Session::Manager::Default' />
         <module name='cookie_man'  file='Framework::Core::Cookie::Manager::Default'  />
         <module name='request_man' file='Framework::Core::Request::Manager::Default' />
-        <module name='web_request' file='Framework::Core::Request::IO::Mongrel2' threads=3    />
+        <!--<module name='web_request' file='Framework::Core::Request::IO::Mongrel2' threads=3    />-->
+        <module name='web_request' file='Framework::Core::Request::IO::HTTP_Server_Simple' />
         
         <module name='web_router'  file='Framework::Core::Router::Default' >
             <multi_session/>
