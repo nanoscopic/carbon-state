@@ -94,6 +94,10 @@ sub register_folders {
         my $from = $fileroot ? "$fileroot/$web" : $web;
         $sys = $fileroot ? "$fileroot/$sys" : $sys;
         
+        if( ! -d $sys ) {
+          $log->error( text => "Folder \"$sys\" does not exist" );
+        }
+        
         $log->note( text => "Folder map $session - $from -> $sys" );
         
         $router->route_path( 
@@ -152,6 +156,7 @@ sub handle_file_req {
             $r->{'body'} = $data;
         }
         else {
+            $log->error(text=>"File \"$file\" does not exist");
             if( $ext eq 'js' ) {
                 $r->out( text => "alert('File does not exist $file');" );
             }
