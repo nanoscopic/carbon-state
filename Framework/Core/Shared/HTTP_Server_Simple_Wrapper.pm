@@ -38,8 +38,9 @@ sub set_handler {
 sub handle_request {
     my ( $self, $cgi ) = @_;
     #print STDERR "ok\n";
-    print "HTTP/1.0 200 OK\r\n";
-    print $cgi->header;
+    
+    #print "HTTP/1.0 200 OK\r\n";
+    #print $cgi->header;
     my $handler = $self->{'handler'};
     my $params = $self->{'handler_params'};
     $handler->( $cgi, @$params );
