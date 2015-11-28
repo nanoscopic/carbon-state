@@ -120,7 +120,7 @@ sub route {
             my $leftover = $opath;
             $leftover =~ s|^/?$joined||g;
             $r->{'leftover'} = $leftover;
-            print "joined: $joined, leftover: $leftover\n";
+            $log->note( text => "joined: $joined, leftover: $leftover" );
             
             my $set = $route->{'set'};
             my $info;
