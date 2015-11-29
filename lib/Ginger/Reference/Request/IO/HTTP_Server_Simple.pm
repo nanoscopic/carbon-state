@@ -1,4 +1,4 @@
-# Framework::Core::Request::IO::HTTP_Server_Simple
+# Ginger::Reference::Request::IO::HTTP_Server_Simple
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Request::IO::HTTP_Server_Simple - Framework::Core Component
+Ginger::Reference::Request::IO::HTTP_Server_Simple - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,10 +24,10 @@ Framework::Core::Request::IO::HTTP_Server_Simple - Framework::Core Component
 
 =cut
 
-package Framework::Core::Request::IO::HTTP_Server_Simple;
+package Ginger::Reference::Request::IO::HTTP_Server_Simple;
 use strict;
 use Class::Core 0.03 qw/:all/;
-use Framework::Core::Shared::HTTP_Server_Simple_Wrapper;
+use Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper;
 use Data::Dumper;
 
 use vars qw/$VERSION/;
@@ -49,7 +49,7 @@ sub run {
     
     #print Dumper( $self->{'router'}{'route'} );
     #print Dumper( $self->{'router'} );
-    my $server = Framework::Core::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );
+    my $server = Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper->new( 8083 );
     $server->set_handler( \&go, $core, $self );
     $server->run();
 }
@@ -89,8 +89,8 @@ sub go {
     }
     
     print "HTTP/1.0 200 OK\r\n";
-    my $type = $r->{'type'} || 'text/html';
-    print $cgi->header( -type => $type );
+    my $htype = $r->{'type'} || 'text/html';
+    print $cgi->header( -type => $htype );
     
     my $body = $r->get_body();
     print $body;
@@ -137,11 +137,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

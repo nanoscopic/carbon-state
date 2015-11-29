@@ -14,6 +14,9 @@ my @basics = (
         "XML::Bare" => "0.48",
         "Class::Core" => "0.04",
         "Term::ANSIColor" => 0,
+        "Text::Template" => 0, # for templates
+        "HTTP::Server::Simple::CGI" => 0, # default server
+        "Tie::IxHash" => 0, # for templates
         "URI::Escape" => 0
    }
 );

@@ -1,4 +1,4 @@
-# Framework::Core::Request::IO::Mongrel2
+# Ginger::Reference::Request::IO::Mongrel2
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Request::IO::Mongrel2 - Framework::Core Component
+Ginger::Reference::Request::IO::Mongrel2 - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Request::IO::Mongrel2 - Framework::Core Component
 
 =cut
 
-package Framework::Core::Request::IO::Mongrel2;
+package Ginger::Reference::Request::IO::Mongrel2;
 use strict;
 use ZMQ::LibZMQ3;
 use Class::Core 0.03 qw/:all/;
@@ -458,7 +458,7 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core> that handles recieving web requests from Mongrel2 via ZeroMQ.
+Component of L<Ginger::Reference> that handles recieving web requests from Mongrel2 via ZeroMQ.
 
 =head1 DESCRIPTION
 

@@ -1,4 +1,4 @@
-# Framework::Core::Session::Default
+# Ginger::Reference::Session::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Session::Default - Framework::Core Component
+Ginger::Reference::Session::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Session::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Session::Default;
+package Ginger::Reference::Session::Default;
 use strict;
 use Class::Core qw/:all/;
 use vars qw/$VERSION/;
@@ -56,7 +56,7 @@ sub de_serialize {
     my ( $core, $self ) = @_;
     my $raw = $core->get('raw');
     my ( $ob, $xml ) = new XML::Bare( text => $raw );
-    $self->{'dat'} = Framework::Core::simplify( $xml );
+    $self->{'dat'} = XML::Bare::simplify( $xml );
     return $self;
 }
 
@@ -91,11 +91,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

@@ -1,4 +1,4 @@
-# Framework::Core::API::Default
+# Ginger::Reference::API::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::API::Default - Framework::Core Component
+Ginger::Reference::API::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::API::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::API::Default;
+package Ginger::Reference::API::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -92,7 +92,7 @@ sub register_via_spec {
         confess( "No spec set" );
     }
     
-    #$core->dumper("specx",Framework::Core::simplify($specx));
+    #$core->dumper("specx",XML::Bare::simplify($specx));
     
     my $spec = $mod->{'obj'}{'_spec'};
     
@@ -241,11 +241,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

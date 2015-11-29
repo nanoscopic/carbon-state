@@ -1,4 +1,4 @@
-# Framework::Core::Template::Default
+# Ginger::Reference::Template::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Template::Default - Framework::Core Component
+Ginger::Reference::Template::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Template::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Template::Default;
+package Ginger::Reference::Template::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -34,7 +34,7 @@ use Data::Dumper;
 use Text::Template;
 use Tie::IxHash;
 
-# This is a Framework::Core class; -not- a Framework::Core module
+# This is a Ginger::Reference class; -not- a Ginger::Reference module
 
 our $spec = "<func name='init_request'/>";
 
@@ -42,8 +42,8 @@ sub construct {
     my ( $core, $self ) = @_;
     my $file = $self->{'file'}; # file is the actual file containing the template content
     my $xml = $self->{'base'}; # base is the base hash for static values to use in the template
-    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a Framework::Core module name or a reference to a class::core object
-    #$self->{'src'} = Framework::Core::slurp( $self->{'file'} );
+    my $mod = $self->{'mod'}; # module is the module to use as context for available functions - this can be either a Ginger::Reference module name or a reference to a class::core object
+    #$self->{'src'} = Ginger::Reference::slurp( $self->{'file'} );
     $self->{'tpl'} = Text::Template->new( TYPE => 'FILE', SOURCE => $self->{'file'} );
     if( !$self->{'tpl'} ) {
         my $log = $core->get_mod('log');
@@ -64,7 +64,7 @@ sub set_vars {
     my ( $core, $self ) = @_;
     my $vars = $core->get('vars');
     $self->{'vars'} ||= {};
-    Framework::Core::mux( $self->{'vars'}, $vars );
+    Ginger::Reference::Core::mux( $self->{'vars'}, $vars );
 }
 
 # This function should not be called outside of this module
@@ -119,7 +119,7 @@ sub sub_tpl {
             }
             if( $i == $len ) { # set the vars here
                 if( $sub_info->{'vars'} ) {
-                    Framework::Core::mux( $sub_info->{'vars'}, $vars );
+                    Ginger::Reference::Core::mux( $sub_info->{'vars'}, $vars );
                 }
                 else {
                     $sub_info->{'vars'} = $vars;
@@ -142,7 +142,7 @@ sub sub_tpl {
             $ret = $tpl_info->{'tpl'} = $tple->start( name => $tpl );
         }
         else {
-            Framework::Core::mux( $tpl_info->{'vars'}, $vars );
+            Ginger::Reference::Core::mux( $tpl_info->{'vars'}, $vars );
         }
         if( $mod ) {
             #$core->dumper( 'test', 'setting mod' );
@@ -238,11 +238,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

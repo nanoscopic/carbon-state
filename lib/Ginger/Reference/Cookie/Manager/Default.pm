@@ -1,4 +1,4 @@
-# Framework::Core::Cookie::Manager::Default
+# Ginger::Reference::Cookie::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Cookie::Manager::Default - Framework::Core Component
+Ginger::Reference::Cookie::Manager::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -29,7 +29,7 @@ Framework::Core::Cookie::Manager::Default - Framework::Core Component
             # $cookieman->add( cookie => $c1 );
             # $cookieman->add( cookie => $c2 );
 
-package Framework::Core::Cookie::Manager::Default;
+package Ginger::Reference::Cookie::Manager::Default;
 use strict;
 use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
@@ -210,11 +210,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

@@ -1,4 +1,4 @@
-# Framework::Core::Request::IO::Mongrel2
+# Ginger::Reference::Request::IO::Mongrel2
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::RPC::IO::Mongrel2 - Framework::Core Component
+Ginger::Reference::RPC::IO::Mongrel2 - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::RPC::IO::Mongrel2 - Framework::Core Component
 
 =cut
 
-package Framework::Core::RPC::IO::Mongrel2;
+package Ginger::Reference::RPC::IO::Mongrel2;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Data::Dumper;
@@ -104,7 +104,7 @@ sub handle_request {
     zmq_recv( $incoming, $part, 10000 ); # TODO: the size should be configurable
     #print "Recieved request $part\n";
     my ( $ob, $xml ) = new XML::Bare( text => $part );
-    $xml = Framework::Core::simplify( $xml ); 
+    $xml = XML::Bare::simplify( $xml ); 
     print Dumper( $xml );
     my $modname = $xml->{'mod'};
     my $func = $xml->{'func'};
@@ -157,7 +157,7 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core> that handles recieving web requests from Mongrel2 via ZeroMQ.
+Component of L<Ginger::Reference> that handles recieving web requests from Mongrel2 via ZeroMQ.
 
 =head1 DESCRIPTION
 

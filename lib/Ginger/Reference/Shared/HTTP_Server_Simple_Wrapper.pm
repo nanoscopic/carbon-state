@@ -1,4 +1,4 @@
-# Framework::Core::Shared::HTTP_Server_Simple_Wrapper
+# Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Shared::HTTP_Server_Simple_Wrapper - Framework::Core Component
+Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Shared::HTTP_Server_Simple_Wrapper - Framework::Core Component
 
 =cut
 
-package Framework::Core::Shared::HTTP_Server_Simple_Wrapper;
+package Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper;
 use base qw/HTTP::Server::Simple::CGI/;
 
 sub set_handler {
@@ -52,11 +52,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

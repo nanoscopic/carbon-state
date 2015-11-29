@@ -1,4 +1,4 @@
-# Framework::Core::Permission::Manager::Default
+# Ginger::Reference::Permission::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Permission::Manager::Default - Framework::Core Component
+Ginger::Reference::Permission::Manager::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Permission::Manager::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Permission::Manager::Default;
+package Ginger::Reference::Permission::Manager::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -235,11 +235,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

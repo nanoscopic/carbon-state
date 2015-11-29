@@ -1,4 +1,4 @@
-# Framework::Core::Session::Manager::Default
+# Ginger::Reference::Session::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Session::Manager::Default - Framework::Core Component
+Ginger::Reference::Session::Manager::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,9 +24,9 @@ Framework::Core::Session::Manager::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Session::Manager::Default;
+package Ginger::Reference::Session::Manager::Default;
 use strict;
-use Framework::Core::Session::Default;
+use Ginger::Reference::Session::Default;
 use Class::Core 0.03 qw/:all/;
 use Data::Dumper;
 use vars qw/$VERSION/;
@@ -88,7 +88,7 @@ sub get_session {
     my $raw;
     if( $raw = $self->{'sessions'}{ $id } ) {
         $log->note( text => "Fetched session for $id" );
-        my $session = Framework::Core::Session::Default->new( id => $id, man => $self );
+        my $session = Ginger::Reference::Session::Default->new( id => $id, man => $self );
         $session->de_serialize( raw => $raw );
         return $session;
     }
@@ -113,7 +113,7 @@ sub create_session {
     {
         lock $dat->{'sessions'};
         my $id = random_str( $dat->{'sessions'} );
-        $session = Framework::Core::Session::Default->new( id => $id, man => $self );
+        $session = Ginger::Reference::Session::Default->new( id => $id, man => $self );
         print "##############       Added session with id $id\n";
         
         my $raw = $session->serialize();
@@ -155,11 +155,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

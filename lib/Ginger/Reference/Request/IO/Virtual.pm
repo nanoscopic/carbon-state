@@ -1,4 +1,4 @@
-# Framework::Core::Request::IO::Virtual
+# Ginger::Reference::Request::IO::Virtual
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Request::IO::Virtual - Framework::Core Component
+Ginger::Reference::Request::IO::Virtual - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Request::IO::Virtual - Framework::Core Component
 
 =cut
 
-package Framework::Core::Request::IO::Virtual;
+package Ginger::Reference::Request::IO::Virtual;
 use strict;
 use ZMQ::LibZMQ3;
 use Class::Core 0.03 qw/:all/;
@@ -73,10 +73,10 @@ sub run {
             my $post = {};
             my $get = {};
             if( $req->{'post'} ) {
-                $post = Framework::Core::simplify( $req->{'post'} );
+                $post = XML::Bare::simplify( $req->{'post'} );
             }
             if( $req->{'get'} ) {
-                $get = Framework::Core::simplify( $req->{'get'} );
+                $get = XML::Bare::simplify( $req->{'get'} );
             }
             my $resp = $self->virtual_request( path => $path, post => $post, query => $get, cookies => $cookies );
             $cookies = $resp->get_res('cookies');
@@ -203,7 +203,7 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core> that handles created and sending virtual web requests.
+Component of L<Ginger::Reference> that handles created and sending virtual web requests.
 
 =head1 DESCRIPTION
 

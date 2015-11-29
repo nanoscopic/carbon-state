@@ -1,4 +1,4 @@
-# Framework::Core::File::Server::Default
+# Ginger::Reference::File::Server::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::File::Server::Default - Framework::Core Component
+Ginger::Reference::File::Server::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::File::Server::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::File::Server::Default;
+package Ginger::Reference::File::Server::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
@@ -75,7 +75,7 @@ sub register_folders {
     my $session = xval $conf->{'session'};
     
     for my $folder ( @$folders ) {
-        my $mux = Framework::Core::mux_dup( $conf, $folder );
+        my $mux = Ginger::Reference::Core::mux_dup( $conf, $folder );
         
         my $web = xval $mux->{'url'};
         my $sys = xval $mux->{'sys'};
@@ -150,7 +150,7 @@ sub handle_file_req {
             }
             $r->{'content_type'} = $ctype;
             
-            my $data = Framework::Core::slurp( $file );
+            my $data = Ginger::Reference::Core::slurp( $file );
             
             #$r->out( text => $data );
             $r->{'body'} = $data;
@@ -177,11 +177,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

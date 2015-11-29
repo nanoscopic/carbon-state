@@ -1,4 +1,4 @@
-# Framework::Core::Data::LockedHashSet
+# Ginger::Reference::Data::LockedHashSet
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Data::LockedHashSet - Framework::Core Component
+Ginger::Reference::Data::LockedHashSet - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Data::LockedHashSet - Framework::Core Component
 
 =cut
 
-package Framework::Core::Data::LockedHashSet;
+package Ginger::Reference::Data::LockedHashSet;
 use Class::Core 0.03 qw/:all/;
 use threads::shared;
 use XML::Bare;
@@ -184,7 +184,7 @@ sub popall {
 
 sub getset {
     my $id = CORE::shift;
-    return Framework::Core::Data::LockedHashSet->new( id => $id );
+    return Ginger::Reference::Data::LockedHashSet->new( id => $id );
 }
 
 sub simplify {

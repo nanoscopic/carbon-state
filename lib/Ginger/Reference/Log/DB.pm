@@ -1,4 +1,4 @@
-# Framework::Core::Log::Default
+# Ginger::Reference::Log::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Log::DB - Framework::Core Component
+Ginger::Reference::Log::DB - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Log::DB - Framework::Core Component
 
 =cut
 
-package Framework::Core::Log::DB;
+package Ginger::Reference::Log::DB;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Term::ANSIColor qw/:constants color/;
@@ -136,7 +136,7 @@ sub note {
         $file ||= ''; $line ||= '';
         $file =~ s|^[./]+||g; $file =~ s|\.pm$||g;
         next if( $file =~ m|^Class| );
-        next if( $file eq 'Framework/Core' );
+        next if( $file eq 'Ginger/Reference/Core' );
         $trace .= "$file:$line,";
     }
     
@@ -236,11 +236,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

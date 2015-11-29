@@ -1,4 +1,4 @@
-# Framework::Core::Request::Default
+# Ginger::Reference::Request::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Request::Default - Framework::Core Component
+Ginger::Reference::Request::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Request::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Request::Default;
+package Ginger::Reference::Request::Default;
 use Class::Core 0.03 qw/:all/;
 use Carp;
 use strict;

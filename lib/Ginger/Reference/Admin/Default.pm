@@ -1,4 +1,4 @@
-# Framework::Core::Admin::Default
+# Ginger::Reference::Admin::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Admin::Default - Framework::Core Component
+Ginger::Reference::Admin::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,7 +24,7 @@ Framework::Core::Admin::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Admin::Default;
+package Ginger::Reference::Admin::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use Data::Dumper;
@@ -68,7 +68,7 @@ sub admin {
     my $base = $core->get_base();
     my $dump = Dumper( $self->{'r'}{'perms'} );
     $self->{'r'}->out( text => "
-        <h2>Framework::Core Admin</h2>
+        <h2>Ginger::Reference Admin</h2>
         <ul>
         <li><a href='/$base/core/log'>log</a>
         </ul>
@@ -262,7 +262,7 @@ sub log {
     for( my $i=$len;$i>=0;$i-- ) {
         #my $item = $items->[ $i ];
         #my ( $ob, $xml ) = XML::Bare->new( text => $item );
-        #$xml = Framework::Core::simplify( $xml );
+        #$xml = XML::Bare::simplify( $xml );
         my $xml = $items->[ $i ];
         my $type = $xml->{'type'} || '';
         my $text = $xml->{'text'} || '';
@@ -287,7 +287,7 @@ sub log {
         my $tid = $xml->{'tid'} || '';
         my $trace = $xml->{'trace'} || '';
         $trace =~ s/,/<br>/g;
-        if( $nocore && $trace =~ m|^Framework/Core| ) { next; }
+        if( $nocore && $trace =~ m|^Ginger/Reference| ) { next; }
         $out .= "<tr><td>$type</td><td>$text</td><td>$time</td><td>$dif</td><td>$rid</td><td>$trace</td><td>$tid</td></tr>";
     }
     $out .= "</table>";
@@ -308,7 +308,7 @@ sub login {
     }
     #print Dumper( $r->{'postvars'} );
     
-    $r->out( text => '<h2>Framework::Core Admin Login</h2>' );
+    $r->out( text => '<h2>Ginger::Reference Admin Login</h2>' );
     if( $r->{'type'} eq 'post' ) {
         my $postvars = $r->{'postvars'};
         my $user = $postvars->{'user'};
@@ -364,11 +364,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 

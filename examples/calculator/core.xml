@@ -1,36 +1,36 @@
 <xml>
-    <!--<class name='hash' file='Framework::Core::Data::LockedHashSet' />-->
-    <module name='log'         file='Framework::Core::Log::Default' console='1'   shared=1        />
+    <!--<class name='hash' file='Ginger::Reference::Data::LockedHashSet' />-->
+    <module name='log'         file='Ginger::Reference::Log::Default' console='1'   shared=1        />
     
     <mode name='default'>
-        <module name='core_perm_flat'   file='Framework::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
-        <module name='core_perm_man'    file='Framework::Core::Permission::Manager::Default' method='core_perm_flat' />
-        <module name='session_man' file='Framework::Core::Session::Manager::Default' />
-        <module name='cookie_man'  file='Framework::Core::Cookie::Manager::Default'  />
-        <module name='request_man' file='Framework::Core::Request::Manager::Default' />
-        <!--<module name='web_request' file='Framework::Core::Request::IO::Mongrel2' threads=3    />-->
-        <module name='web_request' file='Framework::Core::Request::IO::HTTP_Server_Simple' />
+        <module name='core_perm_flat'   file='Ginger::Reference::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='core_perm_man'    file='Ginger::Reference::Permission::Manager::Default' method='core_perm_flat' />
+        <module name='session_man' file='Ginger::Reference::Session::Manager::Default' />
+        <module name='cookie_man'  file='Ginger::Reference::Cookie::Manager::Default'  />
+        <module name='request_man' file='Ginger::Reference::Request::Manager::Default' />
+        <!--<module name='web_request' file='Ginger::Reference::Request::IO::Mongrel2' threads=3    />-->
+        <module name='web_request' file='Ginger::Reference::Request::IO::HTTP_Server_Simple' />
         
-        <module name='web_router'  file='Framework::Core::Router::Default' >
+        <module name='web_router'  file='Ginger::Reference::Router::Default' >
             <multi_session/>
             <session name='CORE' perms='core_perm_man' />
         </module>
         
-        <module name='tpl_engine' file='Framework::Core::Template::Engine::TextTemplate'/>
+        <module name='tpl_engine' file='Ginger::Reference::Template::Engine::TextTemplate'/>
         
-        <module name='core_admin' file='Framework::Core::Admin::Default' />
+        <module name='core_admin' file='Ginger::Reference::Admin::Default' />
     </mode>
     
     <mode name='virt'>
-        <module name='core_api'         file='Framework::Core::API::Default'>
+        <module name='core_api'         file='Ginger::Reference::API::Default'>
             <group name='core' session='CORE' mux/>
         </module>
-        <module name='core_perm_flat'   file='Framework::Core::Permission::Method::Flatfile' store='flat_perms.xml'/>
-        <module name='core_perm_man'    file='Framework::Core::Permission::Manager::Default' method='core_perm_flat' />
-        <module name='session_man' file='Framework::Core::Session::Manager::Default' />
-        <module name='cookie_man'  file='Framework::Core::Cookie::Manager::Default'  />
-        <module name='request_man' file='Framework::Core::Request::Manager::Default' />
-        <module name='web_router'  file='Framework::Core::Router::Default' >
+        <module name='core_perm_flat'   file='Ginger::Reference::Permission::Method::Flatfile' store='flat_perms.xml'/>
+        <module name='core_perm_man'    file='Ginger::Reference::Permission::Manager::Default' method='core_perm_flat' />
+        <module name='session_man' file='Ginger::Reference::Session::Manager::Default' />
+        <module name='cookie_man'  file='Ginger::Reference::Cookie::Manager::Default'  />
+        <module name='request_man' file='Ginger::Reference::Request::Manager::Default' />
+        <module name='web_router'  file='Ginger::Reference::Router::Default' >
             <multi_session/>
             <session name='CORE' perms='core_perm_man' />
         </module>

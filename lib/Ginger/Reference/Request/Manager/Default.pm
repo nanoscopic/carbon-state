@@ -1,4 +1,4 @@
-# Framework::Core::Request::Manager::Default
+# Ginger::Reference::Request::Manager::Default
 # Version 0.01
 # Copyright (C) 2013 David Helkowski
 
@@ -16,7 +16,7 @@
 
 =head1 NAME
 
-Framework::Core::Request::Manager::Default - Framework::Core Component
+Ginger::Reference::Request::Manager::Default - Ginger::Reference Component
 
 =head1 VERSION
 
@@ -24,18 +24,18 @@ Framework::Core::Request::Manager::Default - Framework::Core Component
 
 =cut
 
-package Framework::Core::Request::Manager::Default;
+package Ginger::Reference::Request::Manager::Default;
 use Class::Core 0.03 qw/:all/;
 use strict;
 use vars qw/$VERSION/;
-use Framework::Core::Request::Default 0.01;
+use Ginger::Reference::Request::Default 0.01;
 use Date::Format;
 $VERSION = "0.02";
 
 sub init {
     my ( $core, $self ) = @_;
     my $app = $core->get_app();
-    $app->register_class( name => 'req', file => 'Framework::Core::Request::Default' ); 
+    $app->register_class( name => 'req', file => 'Ginger::Reference::Request::Default' ); 
 }
 
 my $rid = 0;
@@ -69,11 +69,11 @@ __END__
 
 =head1 SYNOPSIS
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 DESCRIPTION
 
-Component of L<Framework::Core>
+Component of L<Ginger::Reference>
 
 =head1 LICENSE
 
