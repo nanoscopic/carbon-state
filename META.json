@@ -12,7 +12,7 @@
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
       "version" : "2"
    },
-   "name" : "Framework-Core",
+   "name" : "Ginger",
    "no_index" : {
       "directory" : [
          "t",
@@ -38,7 +38,7 @@
             "Term::ANSIColor" : 0,
             "Test::More" : 0,
             "URI::Escape" : 0,
-            "XML::Bare" : "0.45"
+            "XML::Bare" : "0.53"
          }
       }
    },

@@ -12,7 +12,7 @@ license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
-name: Framework-Core
+name: Ginger
 no_index:
   directory:
     - t
@@ -20,48 +20,48 @@ requires:
   Carp: 0
   Exporter: 0
   Test::More: 0
-  XML::Bare: 0.48
+  XML::Bare: 0.53
   Class::Core: 0.03
   Term::ANSIColor: 0
   URI::Escape: 0
 provides:
-  Framework::Core:
+  Ginger::Reference
     file: Core.pm
     version: 0.02
-  Framework::Core::Admin::Default
+  Ginger::Reference::Admin::Default
     file: Core/Admin/Default.pm
     version: 0.02
-  Framework::Core::Cookie::Manager::Default
+  Ginger::Reference::Cookie::Manager::Default
     file: Core/Cookie/Manager/Default.pm
     version: 0.02
-  Framework::Core::Log::Default
+  Ginger::Reference::Log::Default
     file: Core/Log/Default.pm
     version: 0.02
-  Framework::Core::Permission::Manager::Default
+  Ginger::Reference::Permission::Manager::Default
     file: Core/Permission/Manager/Default.pm
     version: 0.02
-  Framework::Core::Request::Default
+  Ginger::Reference::Request::Default
     file: Core/Request/Default.pm
     version: 0.02
-  Framework::Core::Request::IO::HTTP_Server_Simple
+  Ginger::Reference::Request::IO::HTTP_Server_Simple
     file: Core/Request/IO/HTTP_Server_Simple.pm
     version: 0.02
-  Framework::Core::Request::IO::Mongrel2
+  Ginger::Reference::Request::IO::Mongrel2
     file: Core/Request/IO/Mongrel2.pm
     version: 0.02
-  Framework::Core::Request::Manager::Default
+  Ginger::Reference::Request::Manager::Default
     file: Core/Request/Manager/Default.pm
     version: 0.02
-  Framework::Core::Router::Default
+  Ginger::Reference::Router::Default
     file: Core/Router/Default.pm
     version: 0.02
-  Framework::Core::RPC::IO::Mongrel2
+  Ginger::Reference::RPC::IO::Mongrel2
     file: Core/RPC/IO/Mongrel2.pm
     version: 0.02
-  Framework::Core:Session::Manager::Default
+  Ginger::Reference:Session::Manager::Default
     file: Core/Session/Manager/Default.pm
     version: 0.02
-  Framework::Core::Shared::HTTP_Server_Simple_Wrapper
+  Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper
     file: Core/Shared/HTTP_Server_Simple_Wrapper.pm
     version: 0.01
 version: 0.02
