@@ -1,12 +1,12 @@
-Framework::Core
+Ginger
 ------------
 
 INSTALLATION
-  Download Framework-Core-latest.tar.gz and untar it:
-    % tar -xzf Framework-Core-latest.tar.gz
+  Download Ginger-latest.tar.gz and untar it:
+    % tar -xzf Ginger-latest.tar.gz
     
   Follow the standard steps for making and compiling a perl module:
-    % cd Framework-Core-X.XX ( X.XX = the latest version )
+    % cd Ginger-X.XX ( X.XX = the latest version )
     % perl Makefile.PL
     % make
     % make test
