@@ -20,14 +20,14 @@ Ginger - Application framework built around Class::Core wrapper system
 
 =head1 VERSION
 
-0.02
+0.03
 
 =cut
 
 package Ginger;
 
 use vars qw/$VERSION/;
-$VERSION = "0.02";
+$VERSION = "0.03";
 
 sub new {
     my $class = shift;
