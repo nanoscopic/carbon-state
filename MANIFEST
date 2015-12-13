@@ -3,6 +3,7 @@ Makefile.PL
 MANIFEST
 META.yml
 README
+lib/Ginger.pm
 lib/Ginger/Reference/Core.pm
 lib/Ginger/Reference/Admin/Default.pm
 lib/Ginger/Reference/Cookie/Manager/Default.pm

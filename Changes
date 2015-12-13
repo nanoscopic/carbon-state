@@ -1,4 +1,6 @@
 Ginger Changelog
+0.04 ( 12-12-15 )
+  - Attempting to get new root Ginger.pm indexed properly
 0.03 ( 12-12-15 )
   - Add 'Ginger' stub module to describe on CPAN and properly own namespace
 0.02 ( 11-28-15 )

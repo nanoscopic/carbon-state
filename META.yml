@@ -25,43 +25,45 @@ requires:
   Term::ANSIColor: 0
   URI::Escape: 0
 provides:
+  Giner
+    file: 
   Ginger::Reference
-    file: Core.pm
-    version: 0.02
+    file: Ginger.pm
+    version: 0.04
   Ginger::Reference::Admin::Default
-    file: Core/Admin/Default.pm
+    file: Reference/Core/Admin/Default.pm
     version: 0.02
   Ginger::Reference::Cookie::Manager::Default
-    file: Core/Cookie/Manager/Default.pm
+    file: Reference/Core/Cookie/Manager/Default.pm
     version: 0.02
   Ginger::Reference::Log::Default
-    file: Core/Log/Default.pm
+    file: Reference/Core/Log/Default.pm
     version: 0.02
   Ginger::Reference::Permission::Manager::Default
-    file: Core/Permission/Manager/Default.pm
+    file: Reference/Core/Permission/Manager/Default.pm
     version: 0.02
   Ginger::Reference::Request::Default
-    file: Core/Request/Default.pm
+    file: Reference/Core/Request/Default.pm
     version: 0.02
   Ginger::Reference::Request::IO::HTTP_Server_Simple
-    file: Core/Request/IO/HTTP_Server_Simple.pm
+    file: Reference/Core/Request/IO/HTTP_Server_Simple.pm
     version: 0.02
   Ginger::Reference::Request::IO::Mongrel2
-    file: Core/Request/IO/Mongrel2.pm
+    file: Reference/Core/Request/IO/Mongrel2.pm
     version: 0.02
   Ginger::Reference::Request::Manager::Default
-    file: Core/Request/Manager/Default.pm
+    file: Reference/Core/Request/Manager/Default.pm
     version: 0.02
   Ginger::Reference::Router::Default
-    file: Core/Router/Default.pm
+    file: Reference/Core/Router/Default.pm
     version: 0.02
   Ginger::Reference::RPC::IO::Mongrel2
-    file: Core/RPC/IO/Mongrel2.pm
+    file: Reference/Core/RPC/IO/Mongrel2.pm
     version: 0.02
   Ginger::Reference:Session::Manager::Default
-    file: Core/Session/Manager/Default.pm
+    file: Reference/Core/Session/Manager/Default.pm
     version: 0.02
   Ginger::Reference::Shared::HTTP_Server_Simple_Wrapper
-    file: Core/Shared/HTTP_Server_Simple_Wrapper.pm
+    file: Reference/Core/Shared/HTTP_Server_Simple_Wrapper.pm
     version: 0.01
-version: 0.02
+version: 0.04
